@@ -168,7 +168,13 @@ apresenta o resultado.
   amostra fictícia retornou painel de alertas (glúten/soja/Tartrazina, lactose ausente) + tabela de
   aditivos com INS — chamada real ao modelo institucional funcionando. **Commit `79b8040`**
   (2026-11-08): inclui também a decisão 0.8 (UX da entrada multi-linha).
-- [ ] 5. `feat(basico): processamento e apresentação da resposta` — fluxo de 4 passos completo no terminal.
+- [x] 5. `feat(basico): processamento e apresentação da resposta` — fluxo de 4 passos completo no terminal.
+  **Implementação:** `src/llm.py::processar_resposta()` (passo 3) normaliza a forma do texto — trim nas
+  bordas e colapso de 3+ quebras em no máximo 2, preservando parágrafos; não reinterpreta conteúdo.
+  `src/app.py::apresentar()` (passo 4) isola a formatação da saída (cabeçalho + corpo + aviso fixo de
+  caráter informacional) e sinaliza texto vazio sem imprimir nada. `main()` passa a orquestrar os 4
+  passos nomeados. Evidência: suíte → **6 passed**; `python -m src.app` via pipe com amostra fictícia
+  retornou painel de alertas + tabela de aditivos formatados e o aviso informacional — ciclo completo.
 - [ ] 6. `test(basico): tratamento de resposta ausente com integração simulada` — `test_resposta.py` verde offline.
 - [ ] 7. `docs(basico): README com instalação, execução e justificativa do LLM` — README permite executar seguindo só o texto.
 - [ ] 8. `feat(basico): .env.example e cobertura do .gitignore` *(antecipado pelo decisão 0.7)* —

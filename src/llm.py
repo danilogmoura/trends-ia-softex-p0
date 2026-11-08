@@ -1,9 +1,12 @@
-"""Preparo e envio da solicitação ao LLM (compatível com API OpenAI).
+"""Preparo, envio e processamento da solicitação ao LLM (API compatível com OpenAI).
 
-Responsabilidade única: montar a mensagem (system + usuário) e chamar o único
-modelo configurado, devolvendo o texto da resposta. A conexão vem sempre de
+Responsabilidades (itens 4–5 do Nível Básico): montar a mensagem (system + usuário),
+chamar o único modelo configurado e **processar** o texto devolvido, normalizando
+espaços e quebras irregulares antes da apresentação. A conexão vem sempre de
 ``carregar_config()`` — nada de base URL, chave ou modelo hardcoded aqui.
 """
+
+import re
 
 from openai import OpenAI
 
@@ -56,3 +59,19 @@ def analisar_ingredientes(entrada_validada: str, config: dict) -> str:
     escolha = resposta.choices[0] if resposta.choices else None
     conteudo = escolha.message.content if escolha and escolha.message else None
     return conteudo or ""
+
+
+def processar_resposta(resposta_crua: str) -> str:
+    """Passo 3 do ciclo — processa o texto devolvido pelo modelo.
+
+    Normaliza apenas a *forma* do texto: remove espaços nas bordas e reduz
+    sequências de três ou mais quebras de linha (comum em respostas Markdown)
+    a no máximo duas, preservando parágrafos. Não interpreta nem reorganiza o
+    conteúdo — a decodificação já vem pronta do modelo.
+
+    O tratamento de resposta **ausente** ou em formato inesperado é coberto
+    offline no item 6; aqui assumimos uma string (possivelmente vazia).
+    """
+    texto = resposta_crua.strip()
+    # \n{3,} -> \n\n : colapsa blocos de linhas em branco excessivos.
+    return re.sub(r"\n{3,}", "\n\n", texto)

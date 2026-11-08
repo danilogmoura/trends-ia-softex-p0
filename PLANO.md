@@ -75,6 +75,20 @@ Duração prevista do P0: 4–5 semanas.
   resposta ausente/vazia; os testes que permanecem no Básico (`test_entrada`, `test_config`) são de
   **lógica determinística pura**, não dependem de simular rede — portanto continuam legítimos ali. Nada
   se perde: a doutrina de "testar além do cenário ideal" segue válida, só executada no nível correto.
+- [x] 0.11 **Decisão de provedor do LLM durante o desenvolvimento (registrada 2026-11-08).** O serviço
+  institucional previsto para o P0 apresentou instabilidade de disponibilidade nas janelas de
+  desenvolvimento. Para não travar o fluxo de 4 passos nem os testes com chamada real, o `.env` local
+  passou a apontar para um **provedor externo alternativo** que expõe endpoint compatível com a API
+  OpenAI, no plano de uso sob demanda (custos do aluno), usando **um único modelo** por vez — conforme o
+  enunciado permite substituir o institucional quando este não estiver disponível, arcando o aluno com o
+  custo e sem suporte da instituição sobre o serviço externo. A troca é **apenas de configuração externa**
+  (`LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL`): nenhum código do núcleo muda, pois a conexão já vem toda
+  de `carregar_config()`. Por restrição de segurança (repositório **público**), **não** se publica aqui —
+  nem no README, `.env.example`, logs ou vídeo — o endereço, o nome comercial do provedor, o identificador
+  exato do modelo nem qualquer credencial. O `.env.example` permanece com placeholders genéricos. No
+  relatório final registra-se apenas que houve substituição por provedor externo compatível e o porquê
+  (instabilidade do institucional), sem dados restritos. Se o serviço institucional voltar a ficar estável,
+  basta reescrever as três variáveis do `.env` para retomá-lo, sem tocar em código.
 
 **Problema escolhido:** Traduzir a lista de ingredientes de um produto
 industrializado — cheia de termos técnicos, códigos INS e subprodutos que mascaram

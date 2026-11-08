@@ -216,11 +216,24 @@ apresenta o resultado.
   aditivos formatados e o aviso informacional — ciclo de 4 passos completo com chamada real.
 - ~~6. `test(basico): tratamento de resposta ausente com integração simulada`~~ — **removido do Básico
   pela decisão 0.10**: o mock pertence ao Avançado (item 3 daquela sequência), onde o enunciado o pede.
-- [ ] 7. `docs(basico): README com instalação, execução e justificativa do LLM` — README permite executar seguindo só o texto.
-- [ ] 8. `feat(basico): .env.example e cobertura do .gitignore` *(antecipado pelo decisão 0.7)* —
+- [x] 7. `docs(basico): README com instalação, execução e justificativa do LLM` — README permite executar seguindo só o texto.
+  **Implementação:** `README.md` reescrito a partir do placeholder — problema, público, justificativa
+  do LLM, limites de escopo, instalação (venv + pip, comando genérico único `python -m venv .venv`),
+  configuração via `.env.example`, execução (terminal interativo e por pipe), exemplo de saída alinhado
+  ao formato real, testes, estrutura e limitações. Versão Python documentada como **3.12+** (base 3.12.3;
+  validado também em 3.13 e 3.14.7). Evidência: scan de segredo no staged diff **LIMPO**; comando
+  documentado `python -m pytest` produz exatamente as **6 passed** prometidas; exemplo de pipe executado
+  com exit 0. **Commit `4073d29`** (2026-11-08): inclui também a correção de coerência dos comentários de
+  `src/llm.py` que apontavam para o antigo item 6 (agora Intermediário/Avançado, decisão 0.10).
+- [x] 8. `feat(basico): .env.example e cobertura do .gitignore` *(antecipado pelo decisão 0.7)* —
   `.env.example` presente com **apenas nomes de variáveis** (sem valor real, sem endpoint,
   sem modelo institucional); `git check-ignore -v .env` confirma que `.env` é ignorado; varredura
   do staged diff não encontra cadeia de segredo.
+  **Implementação:** `.env.example` criado com os três nomes (`LLM_BASE_URL` / `LLM_API_KEY` /
+  `LLM_MODEL`) e valores-placeholder genéricos; cabeçalho orienta `cp .env.example .env` e adverte que o
+  repositório é público. Evidência: `git check-ignore .env` confirma o ignore; varredura do staged diff
+  **LIMPO** (nenhum endpoint/nome comercial/`sk-`). **Commit `52f5d17`** (2026-11-08): registra também a
+  decisão 0.11 (substituição por provedor externo durante desenvolvimento, sem publicar dados restritos).
 
 ### Pendências de UX registradas (fora do escopo dos itens acima)
 

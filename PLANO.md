@@ -89,6 +89,15 @@ Duração prevista do P0: 4–5 semanas.
   relatório final registra-se apenas que houve substituição por provedor externo compatível e o porquê
   (instabilidade do institucional), sem dados restritos. Se o serviço institucional voltar a ficar estável,
   basta reescrever as três variáveis do `.env` para retomá-lo, sem tocar em código.
+- [x] 0.12 **Decisão de divisão "tratar × testar" a resposta vazia (registrada 2026-11-08, a pedido do aluno).**
+  O checklist do Nível Intermediário exige *tratar* "resposta vazia ou em formato inesperado" com mensagem
+  compreensível; a decisão 0.10 moveu o *teste com mock* dessa situação para o Avançado. Não há contradição:
+  são dois artefatos distintos. No **Intermediário** implementa-se o **tratamento** (código que detecta corpo
+  vazio/formato inesperado na chamada real e encerra com orientação legível, sem stack trace). No **Avançado**
+  entra o **teste local offline** (`test_resposta.py`) que exercita esse mesmo tratamento por integração
+  simulada, sem rede. Consequência: o item 4 do Intermediário cobre o tratamento de todos os seis cenários da
+  matriz (incluindo resposta vazia); o item 3 do Avançado mantém o mock. Assim cada requisito de erro do
+  checklist tem implementação no nível onde é cobrado e teste no nível onde o enunciado pede evidência offline.
 
 **Problema escolhido:** Traduzir a lista de ingredientes de um produto
 industrializado — cheia de termos técnicos, códigos INS e subprodutos que mascaram
@@ -265,26 +274,37 @@ Atualizar linha **NÍVEL ATUAL** → `INTERMEDIÁRIO`.
 
 ## Nível 2 — INTERMEDIÁRIO (organização e tratamento de erros)
 
-**Objetivo:** amadurecer a **mesma** aplicação — separar responsabilidades e fechar
-a matriz de erros.
+**Objetivo:** amadurecer a **mesma** aplicação — refinar as fronteiras entre módulos e
+fechar a **matriz completa de erros** exigida pelo checklist do `AGENTS.md`.
 
-### Testes primeiro
+> A separação de responsabilidades já foi construída no Básico (`src/entrada.py`,
+> `config.py`, `llm.py`, `app.py`). Aqui ela é **refinada à luz dos erros**, não refeita do zero
+> (evita refactor fake). Ver item 3.
 
-| Teste | Cenário coberto | Evidência mínima |
-| --- | --- | --- |
-| `test_config.py` (extensão) | credencial inválida → encerramento controlado | "Credencial inválida" |
-| `test_rede.py` | falha de comunicação e timeout → mensagem compreensível | "Falha de comunicação" |
-| `test_resposta.py` (extensão) | resposta em formato inesperado | matriz de erros |
+### Matriz de erros (mapeada 1:1 ao checklist Intermediário)
+
+Todo cenário abaixo é **tratado** no Intermediário (item 4) com mensagem compreensível, sem
+stack trace crua nem segredo exposto. Os testes nomeados exercitam o tratamento; quando o
+enunciado só admite via integração simulada, o **teste offline** fica no Avançado (decisão 0.12).
+
+| # | Cenário (checklist) | Como é demonstrado no Intermediário | Evidência |
+| --- | --- | --- | --- |
+| 1 | Configuração ausente ou inválida | `test_config.py` (estende o do Básico): variável faltando ou malformed → erro claro citando só o nome | "config ausente/inválida" |
+| 2 | Credencial ausente | `test_config.py`: `LLM_API_KEY` vazio → encerramento controlado, sem vazar valor | "credencial ausente" |
+| 3 | Credencial inválida | `test_rede.py` com cliente simulado: API devolve 401 → mensagem de autenticação, sem ecoar chave | "credencial inválida" |
+| 4 | Indisponibilidade do LLM | `test_rede.py`: API devolve 5xx / conexão recusada → orienta tentar mais tarde | "indisponibilidade" |
+| 5 | Falha de comunicação / timeout | `test_rede.py`: exceção de rede / estouro de prazo → distingue timeout de queda | "falha de comunicação · timeout" |
+| 6 | Resposta vazia ou formato inesperado | `test_resposta.py` (chamada real pode vir vazia): corpo ausente/inesperado → tratamento legível; **teste offline** no Avançado (0.12) | "resposta vazia/formato inesperado" |
 
 ### Sequência de commits prevista (branch + PR obrigatórios)
 
 - [ ] 1. branch `intermediario/tratamento-erros` criada a partir de `p0-basico`.
 - [ ] 2. `test(intermediario): credencial inválida, indisponibilidade e timeout` (vermelhos) — `pytest` falha nesses casos.
-- [ ] 3. `refactor(intermediario): separar entrada, config, solicitação, chamada, resposta e saída` — testes do Básico continuam verdes (sem regressão).
-- [ ] 4. `feat(intermediario): tratamento controlado da matriz de erros` (+ testes verdes) — `test_rede.py` e extensões verdes; nenhuma mensagem crua de exceção.
+- [ ] 3. `refactor(intermediario): refinar fronteiras entre módulos à luz da matriz de erros` — extração do tratamento de exceções para camada própria (ex.: separar mapeamento de erro de rede/resposta dentro de `llm.py`), sem reorganizar o que o Básico já modularizou. Testes do Básico continuam verdes (sem regressão).
+- [ ] 4. `feat(intermediario): tratamento controlado da matriz de erros` (+ testes verdes) — cobre os **seis** cenários da matriz acima; `test_rede.py` e extensões de `test_config.py`/`test_resposta.py` verdes; nenhuma mensagem crua de exceção; nenhum segredo exposto.
 - [ ] 5. `test(intermediario): consistência entre`.env.example` e as variáveis lidas por `config.py`` — artefatos criados no Básico (decisão 0.7); aqui apenas se confere que todo nome declarado no template é de fato consumido pelo código, e que nenhum valor real aparece.
 - [ ] 6. `docs(intermediario): exemplos de entrada/saída e distinção testes reais × simulados` — README atualizado.
-- [ ] 7. PR → merge para `main` — PR linkado no histórico.
+- [ ] 7. PR → merge para `master` (branch real do repositório) — PR linkado no histórico.
 
 **Gate de saída:** checklist Intermediário do `AGENTS.md` completo → tag
 `p0-intermediario`. Atualizar **NÍVEL ATUAL** → `AVANÇADO`.

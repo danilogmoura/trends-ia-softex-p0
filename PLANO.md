@@ -114,8 +114,10 @@ Item concluído **somente** quando: commit aprovado pelo usuário e executado **
 evidência verificável (comando citado na coluna). Marque `- [x]` no mesmo diff que
 apresenta o resultado.
 
-- [ ] 0. `docs(p0): regras do agente, plano e instruções do repositório` — `AGENTS.md`, `PLANO.md`
+- [x] 0. `docs(p0): regras do agente, plano e instruções do repositório` — `AGENTS.md`, `PLANO.md`
   e `.github/instructions/` versionados; varredura do staged diff sem cadeia de segredo.
+  **Commit `fb6f7ab`** (2026-11-08): 4 arquivos, 643 inserções; varredura confirmou ausência de IP,
+  hostname, endpoint ou chave institucional (apenas o nome público "Devel" e referência ao fórum).
 - [ ] 1. `chore: estrutura inicial, .gitignore e dependências declaradas` — `git ls-files` cobre `.gitignore`/`requirements.txt`; `.env` ausente do índice. O `.gitignore` já cobre `.env`, venv e caches desde aqui (decisão 0.7), não apenas no Intermediário.
 - [ ] 2. `test(basico): casos de entrada vazia e configuração ausente` (vermelhos) — `pytest` falha exatamente nesses dois casos.
 - [ ] 3. `feat(basico): leitura e validação da entrada textual` (+ testes verdes) — `test_entrada.py` verde.

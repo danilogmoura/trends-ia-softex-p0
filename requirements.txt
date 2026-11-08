@@ -1,0 +1,12 @@
+# Dependências do P0 — Primeiro fluxo com LLM
+# Instalação: python -m pip install -r requirements.txt  (dentro do venv)
+# Python testado: 3.12
+
+# Cliente da API do LLM (serviço institucional expõe endpoint compatível com OpenAI).
+openai>=1.40,<2.0
+
+# Carregamento de configuração sensível a partir de .env (fora do versionamento).
+python-dotenv>=1.0,<2.0
+
+# Testes (suíte local offline, sem chamada real ao LLM).
+pytest>=8.0,<9.0

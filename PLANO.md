@@ -98,6 +98,18 @@ Duração prevista do P0: 4–5 semanas.
   simulada, sem rede. Consequência: o item 4 do Intermediário cobre o tratamento de todos os seis cenários da
   matriz (incluindo resposta vazia); o item 3 do Avançado mantém o mock. Assim cada requisito de erro do
   checklist tem implementação no nível onde é cobrado e teste no nível onde o enunciado pede evidência offline.
+- [x] 0.13 **Decisão de amplitude dos testes vermelhos do item 2 (registrada 2026-11-08, a pedido do aluno).**
+  O título original do item 2 nomeava apenas três cenários (credencial inválida, indisponibilidade, timeout),
+  mas o item 4 se compromete a deixar **verdes** os seis da matriz de erros. Para que todo teste verde tenha
+  um vermelho correspondente escrito antes, o item 2 passa a cobrir os **seis** cenários, distribuídos por
+  arquivo: `test_rede.py` (novo — credencial inválida, indisponibilidade, timeout, via cliente simulado que
+  lança as exceções reais da lib `openai`), extensão de `test_config.py` (config malformed / variável inválida)
+  e `test_resposta.py` (**apenas o tratamento de corpo vazio/formato inesperado observado numa chamada real**).
+  Fronteira preservada com o Avançado: o **teste offline puramente simulado** de resposta ausente/vazia
+  (`test_resposta.py` completo, sem nenhuma chamada de rede) permanece no item 3 do Avançado (decisão 0.12);
+  nada de suíte mockada antecipada aqui. Justificativa do arquivo separado: falhas de rede exigem mockar o
+  cliente OpenAI (infraestrutura distinta dos testes determinísticos de env var), então vão em `test_rede.py`
+  em vez de misturar em `test_config.py`.
 
 **Problema escolhido:** Traduzir a lista de ingredientes de um produto
 industrializado — cheia de termos técnicos, códigos INS e subprodutos que mascaram
@@ -299,7 +311,7 @@ enunciado só admite via integração simulada, o **teste offline** fica no Avan
 ### Sequência de commits prevista (branch + PR obrigatórios)
 
 - [ ] 1. branch `intermediario/tratamento-erros` criada a partir de `p0-basico`.
-- [ ] 2. `test(intermediario): credencial inválida, indisponibilidade e timeout` (vermelhos) — `pytest` falha nesses casos.
+- [ ] 2. `test(intermediario): bateria vermelha da matriz de erros (6 cenários)` — `pytest` falha nos casos ainda não tratados, distribuídos por arquivo (decisão 0.13): `test_rede.py` novo (credencial inválida → 401, indisponibilidade → 5xx/conexão recusada, timeout) usando cliente simulado que lança as exceções reais da lib `openai`; extensão de `test_config.py` (config malformed / variável inválida); `test_resposta.py` só para o tratamento de corpo vazio/formato inesperado numa chamada real. Vermelhos pelo motivo correto: importam a camada de tratamento (`src/erros.py`) que ainda não existe. O **mock offline completo** fica reservado ao Avançado (decisão 0.12).
 - [ ] 3. `refactor(intermediario): refinar fronteiras entre módulos à luz da matriz de erros` — extração do tratamento de exceções para camada própria (ex.: separar mapeamento de erro de rede/resposta dentro de `llm.py`), sem reorganizar o que o Básico já modularizou. Testes do Básico continuam verdes (sem regressão).
 - [ ] 4. `feat(intermediario): tratamento controlado da matriz de erros` (+ testes verdes) — cobre os **seis** cenários da matriz acima; `test_rede.py` e extensões de `test_config.py`/`test_resposta.py` verdes; nenhuma mensagem crua de exceção; nenhum segredo exposto.
 - [ ] 5. `test(intermediario): consistência entre`.env.example` e as variáveis lidas por `config.py`` — artefatos criados no Básico (decisão 0.7); aqui apenas se confere que todo nome declarado no template é de fato consumido pelo código, e que nenhum valor real aparece.

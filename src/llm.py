@@ -72,9 +72,11 @@ def analisar_ingredientes(entrada_validada: str, config: dict) -> str:
         messages=preparar_mensagens(entrada_validada),
     )
 
-    # Resposta pode vir sem conteúdo (choice ausente ou message vazia); o
-    # tratamento dessa ausência é validado offline no item 6. Aqui apenas
-    # extraímos o texto quando presente.
+    # Resposta pode vir sem conteúdo (choice ausente ou message vazia). Aqui
+    # apenas extraímos o texto quando presente, devolvendo string vazia quando
+    # não há. O tratamento controlado dessa ausência (erro claro + teste com
+    # integração simulada) pertence aos níveis Intermediário/Avançado — ver
+    # decisão 0.10; no Básico a chamada é real.
     escolha = resposta.choices[0] if resposta.choices else None
     conteudo = escolha.message.content if escolha and escolha.message else None
     return conteudo or ""
@@ -121,8 +123,9 @@ def processar_resposta(resposta_crua: str) -> str:
     (decisão 0.9), sem cortar conteúdo. Não interpreta nem reorganiza o que o
     modelo escreveu — a decodificação já vem pronta dele.
 
-    O tratamento de resposta **ausente** ou em formato inesperado é coberto
-    offline no item 6; aqui assumimos uma string (possivelmente vazia).
+    O tratamento de resposta **ausente** ou em formato inesperado é coberto nos
+    níveis Intermediário/Avançado (decisão 0.10); aqui assumimos uma string
+    (possivelmente vazia) e apenas normalizamos sua forma.
     """
     texto = resposta_crua.strip()
     # \n{3,} -> \n\n : colapsa blocos de linhas em branco excessivos.

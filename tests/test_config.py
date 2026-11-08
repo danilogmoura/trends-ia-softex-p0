@@ -16,7 +16,7 @@ def test_credencial_ausente_gera_erro_claro(monkeypatch):
         monkeypatch.delenv(var, raising=False)
 
     with pytest.raises((KeyError, RuntimeError, ValueError)) as excinfo:
-        carregar_config()
+        carregar_config(carregar_arquivo=False)
 
     # O erro deve apontar a variável faltante...
     assert "LLM_API_KEY" in str(excinfo.value)
@@ -35,6 +35,6 @@ def test_erro_nao_expoe_valor_de_segredo(monkeypatch):
     monkeypatch.setenv("LLM_MODEL", "modelo-teste")
 
     with pytest.raises((KeyError, RuntimeError, ValueError)) as excinfo:
-        carregar_config()
+        carregar_config(carregar_arquivo=False)
 
     assert segredo not in str(excinfo.value)

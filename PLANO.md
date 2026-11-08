@@ -41,6 +41,18 @@ Duração prevista do P0: 4–5 semanas.
   Consequências: o item 5 do Intermediário passa a ser **verificação de consistência**, não criação;
   o checklist Básico ganha um item além do enunciado (isso não custa nota — é proteção); e este
   desvio deve aparecer no relatório de execução como decisão técnica com critério objetivo.
+- [x] 0.8 **Decisão de UX da entrada interativa (registrada 2026-11-08).** A captura pelo terminal
+  aceita **múltiplas linhas** e se encerra com uma **linha em branco** (Enter numa linha vazia),
+  em vez de `input()` de linha única. Motivo: rótulos reais vêm quebrados em várias linhas, e o
+  ruído de formatação irregular é parte central da justificativa de usar LLM (seção *Entrada*);
+  linha única descartaria a segunda metade do texto colado. Custo aceito conscientemente: quando o
+  texto colado **não** termina em quebra, o usuário precisa de **um Enter extra** para sinalizar o
+  fim — não há como distinguir "terminei" de "ainda vou colar mais" sem um marcador de término.
+  Alternativas avaliadas e rejeitadas: Ctrl+D (EOF) — falha em terminais WSL/Windows; `input()` de
+  linha única — perde entradas multi-linha. Exceção automática: quando a entrada vem por pipe ou
+  redirecionamento (`< arquivo`), o programa lê tudo de uma vez, sem exigir linha em branco
+  (detectado via `sys.stdin.isatty()`). Esta decisão aparece no relatório como escolha de escopo
+  com trade-off documentado.
 
 **Problema escolhido:** Traduzir a lista de ingredientes de um produto
 industrializado — cheia de termos técnicos, códigos INS e subprodutos que mascaram
@@ -116,10 +128,10 @@ Pacote `src/` com responsabilidades separadas em módulos; **ponto de entrada = 
 ```
 src/
   __init__.py
-  app.py       # orquestra o ciclo de 4 passos (itens 4–5)
-  entrada.py   # validar_entrada()      — item 3
-  config.py    # carregar_config()      — item 4
-  llm.py       # preparar/enviar + processar resposta — itens 4–5
+  app.py       # orquestra o ciclo de 4 passos — itens 4–5  (criado no item 4)
+  entrada.py   # validar_entrada()      — item 3  (implementado)
+  config.py    # carregar_config()      — item 4  (implementado)
+  llm.py       # preparar/enviar + processar resposta — itens 4–5  (criado no item 4)
 tests/         # test_entrada, test_config, test_resposta
 pytest.ini     # pythonpath=. · testpaths=tests
 ```
@@ -147,7 +159,14 @@ apresenta o resultado.
   **Implementação:** `src/entrada.py::validar_entrada()` normaliza bordas/quebras, bloqueia vazia com
   orientação (contém "ingredientes") e barra texto > `MAX_ENTRADA_CHARS` (5000) antes da API. Evidência:
   `.venv/bin/python -m pytest tests/test_entrada.py -q` → **4 passed** (vazia, só-espacos, feliz, longo).
-- [ ] 4. `feat(basico): preparo e envio da solicitação ao LLM com config externa` — chamada real responde (evidência "Entrada válida").
+- [x] 4. `feat(basico): preparo e envio da solicitação ao LLM com config externa` — chamada real responde (evidência "Entrada válida").
+  **Implementação:** `src/config.py::carregar_config()` lê `LLM_BASE_URL`/`LLM_API_KEY`/`LLM_MODEL` do
+  ambiente e levanta `ConfiguracaoAusenteError` citando só o NOME faltante (nunca o valor). Parâmetro
+  `carregar_arquivo=False` permite testes sem o `.env` real sobrescrever o cenário simulado.
+  `src/llm.py::analisar_ingredientes()` monta system+user e chama a API compatível com OpenAI; ponto de
+  entrada `src/app.py` orquestra os 4 passos. Evidência: suíte → **6 passed**; `python -m src.app` com
+  amostra fictícia retornou painel de alertas (glúten/soja/Tartrazina, lactose ausente) + tabela de
+  aditivos com INS — chamada real ao modelo institucional funcionando.
 - [ ] 5. `feat(basico): processamento e apresentação da resposta` — fluxo de 4 passos completo no terminal.
 - [ ] 6. `test(basico): tratamento de resposta ausente com integração simulada` — `test_resposta.py` verde offline.
 - [ ] 7. `docs(basico): README com instalação, execução e justificativa do LLM` — README permite executar seguindo só o texto.
@@ -155,6 +174,23 @@ apresenta o resultado.
   `.env.example` presente com **apenas nomes de variáveis** (sem valor real, sem endpoint,
   sem modelo institucional); `git check-ignore -v .env` confirma que `.env` é ignorado; varredura
   do staged diff não encontra cadeia de segredo.
+
+### Pendências de UX registradas (fora do escopo dos itens acima)
+
+Nada aqui é implementação autorizada ainda — entram no plano para execução futura mediante
+aprovação, cada uma em seu próprio commit. Registradas porque foram levantadas durante o
+desenvolvimento mas **não** constavam do plano quando tentadas (regra: nenhuma implementação
+fora do plano).
+
+- [ ] **UX-1 · indicador de processamento durante a chamada ao LLM.** A chamada é síncrona e
+      pode levar de segundos a mais de um minuto (modelo com raciocínio); hoje a tela fica só
+      com o cursor piscando. Opções avaliadas: **(A)** imprimir `"Analisando… (aguarde)"` antes
+      de bloquear (banal, 1 linha em `src/app.py`, sem tocar testes); **(B)** spinner animado
+      (`threading`); **(C)** streaming real (`stream=True`), que altera `analisar_ingredientes()`
+      e a validação de resposta vazia → pertence ao **nível Avançado**, junto com parâmetros
+      configuráveis. Decisão: aplicar **(A)** em commit próprio quando aprovado; **(C)** fica
+      reservado para o Avançado. *(Levantado no item 4; NÃO implementado — removido por decisão
+      do aluno por estar fora do plano.)*
 
 Cada item segue o ciclo **uma fatia → testes → diff → aprovação → commit**; nenhum item novo
 começa enquanto houver mudanças pendentes de aprovação, e nenhum nível novo inicia sem ordem

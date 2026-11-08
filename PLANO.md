@@ -166,7 +166,8 @@ apresenta o resultado.
   `src/llm.py::analisar_ingredientes()` monta system+user e chama a API compatível com OpenAI; ponto de
   entrada `src/app.py` orquestra os 4 passos. Evidência: suíte → **6 passed**; `python -m src.app` com
   amostra fictícia retornou painel de alertas (glúten/soja/Tartrazina, lactose ausente) + tabela de
-  aditivos com INS — chamada real ao modelo institucional funcionando.
+  aditivos com INS — chamada real ao modelo institucional funcionando. **Commit `79b8040`**
+  (2026-11-08): inclui também a decisão 0.8 (UX da entrada multi-linha).
 - [ ] 5. `feat(basico): processamento e apresentação da resposta` — fluxo de 4 passos completo no terminal.
 - [ ] 6. `test(basico): tratamento de resposta ausente com integração simulada` — `test_resposta.py` verde offline.
 - [ ] 7. `docs(basico): README com instalação, execução e justificativa do LLM` — README permite executar seguindo só o texto.

@@ -143,7 +143,10 @@ apresenta o resultado.
   Stubs lançam `AssertionError` (não `NotImplementedError`, que é subclasse de `RuntimeError` e faria
   os testes passarem por acidente). Evidência: `.venv/bin/python -m pytest -q` → **4 failed** (entrada
   vazia, só-espacos, credencial ausente, não-expor-segredo), todos vermelhos pelo motivo correto.
-- [ ] 3. `feat(basico): leitura e validação da entrada textual` (+ testes verdes) — `test_entrada.py` verde.
+- [x] 3. `feat(basico): leitura e validação da entrada textual` (+ testes verdes) — `test_entrada.py` verde.
+  **Implementação:** `src/entrada.py::validar_entrada()` normaliza bordas/quebras, bloqueia vazia com
+  orientação (contém "ingredientes") e barra texto > `MAX_ENTRADA_CHARS` (5000) antes da API. Evidência:
+  `.venv/bin/python -m pytest tests/test_entrada.py -q` → **4 passed** (vazia, só-espacos, feliz, longo).
 - [ ] 4. `feat(basico): preparo e envio da solicitação ao LLM com config externa` — chamada real responde (evidência "Entrada válida").
 - [ ] 5. `feat(basico): processamento e apresentação da resposta` — fluxo de 4 passos completo no terminal.
 - [ ] 6. `test(basico): tratamento de resposta ausente com integração simulada` — `test_resposta.py` verde offline.

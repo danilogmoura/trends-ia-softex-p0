@@ -65,6 +65,16 @@ Duração prevista do P0: 4–5 semanas.
   ingredientes; 6) sem conversação (sem saudação/introdução/despedida). Rigor técnico e referências legais
   (Lei 10.674/2003, RDC 26/2015, códigos INS) preservados. Como o modelo ainda pode devolver texto longo,
   o processamento offline passa a **limitar a largura** da saída no terminal (wrap), sem cortar conteúdo.
+- [x] 0.10 **Decisão de posicionamento do teste com mock (registrada 2026-11-08, a pedido do aluno).**
+  O `test_resposta.py` (resposta ausente/vazia via integração simulada, sem rede) **sai do Nível Básico**
+  e fica **somente no Avançado**, alinhado ao que o enunciado cobra literalmente: "teste de lógica local
+  que não faça uma chamada real ao modelo" aparece apenas na seção Avançado (o Básico pede só enviar ao
+  LLM escolhido e processar a resposta — a chamada é real). Consequências: o antigo item 6 do Básico é
+  removido (Básico fecha nos itens 7 README e 8 `.env.example`); o mock já está coberto pelo item 3 do
+  Avançado (`test(avancado): suíte local executável sem chamada real ao LLM`), que passa a incluir a
+  resposta ausente/vazia; os testes que permanecem no Básico (`test_entrada`, `test_config`) são de
+  **lógica determinística pura**, não dependem de simular rede — portanto continuam legítimos ali. Nada
+  se perde: a doutrina de "testar além do cenário ideal" segue válida, só executada no nível correto.
 
 **Problema escolhido:** Traduzir a lista de ingredientes de um produto
 industrializado — cheia de termos técnicos, códigos INS e subprodutos que mascaram
@@ -121,7 +131,9 @@ para decisões de alto impacto em saúde).
 | `test_entrada.py` | entrada vazia/só espaços é bloqueada com orientação | "Entrada vazia" |
 | `test_entrada.py` | sanitização pré-envio: texto excessivamente longo barrado por regex antes de consumir a API | "Sanitização pré-envio" |
 | `test_config.py` | credencial ausente → erro claro, sem expor segredo | "Credencial ausente" |
-| `test_resposta.py` | resposta ausente/vazia tratada (mock, sem rede) | "Teste sem chamada real" |
+
+> O teste com **mock de resposta** (ausente/vazia, sem rede) foi movido para o Avançado pela
+> decisão 0.10 — o enunciado o cobra só lá. No Básico ficam apenas os testes de lógica determinística.
 
 **Bateria de robustez do domínio** (decidir em qual nível cada uma entra; sempre que o
 problema permitir, testar além do cenário ideal — falha bem investigada é evidência):
@@ -144,7 +156,7 @@ src/
   entrada.py   # validar_entrada()      — item 3  (implementado)
   config.py    # carregar_config()      — item 4  (implementado)
   llm.py       # preparar/enviar + processar resposta — itens 4–5  (criado no item 4)
-tests/         # test_entrada, test_config, test_resposta
+tests/         # test_entrada, test_config (test_resposta entra no Avançado — decisão 0.10)
 pytest.ini     # pythonpath=. · testpaths=tests
 ```
 
@@ -188,7 +200,8 @@ apresenta o resultado.
   passos nomeados. Evidência: suíte → **6 passed**; smoke de `processar_resposta` confirma colapso de
   quebras; `python -m src.app` via pipe com amostra fictícia retornou painel de alertas + tabela de
   aditivos formatados e o aviso informacional — ciclo de 4 passos completo com chamada real.
-- [ ] 6. `test(basico): tratamento de resposta ausente com integração simulada` — `test_resposta.py` verde offline.
+- ~~6. `test(basico): tratamento de resposta ausente com integração simulada`~~ — **removido do Básico
+  pela decisão 0.10**: o mock pertence ao Avançado (item 3 daquela sequência), onde o enunciado o pede.
 - [ ] 7. `docs(basico): README com instalação, execução e justificativa do LLM` — README permite executar seguindo só o texto.
 - [ ] 8. `feat(basico): .env.example e cobertura do .gitignore` *(antecipado pelo decisão 0.7)* —
   `.env.example` presente com **apenas nomes de variáveis** (sem valor real, sem endpoint,
@@ -267,7 +280,7 @@ a matriz de erros.
 
 - [ ] 1. `feat(avancado): parâmetros do LLM ajustáveis por configuração externa` — mudar token/temperatura no `.env` altera a requisição sem editar código.
 - [ ] 2. `feat(avancado): registros de execução sem segredos nem dados pessoais` — log inspecionado não contém chave nem conteúdo sensível.
-- [ ] 3. `test(avancado): suíte local executável sem chamada real ao LLM` — `pytest` completo passa offline.
+- [ ] 3. `test(avancado): suíte local executável sem chamada real ao LLM` — `pytest` completo passa offline. Inclui o `test_resposta.py` de **resposta ausente/vazia com integração simulada**, movido do Básico pela decisão 0.10.
 - [ ] 4. `chore(avancado): validação em ambiente limpo e correções registradas` — venv nova segue só o README; problemas/correções anotados no relatório.
 - [ ] 5. `docs(relatorio): decisões, evolução entre níveis, falhas, uso de IA e limitações` — relatório cobre os seis tópicos do vídeo.
 - [ ] 6. `docs(readme): versão do Python, bibliotecas e acesso aos artefatos` — README final revisado (sem duplicar relatório).

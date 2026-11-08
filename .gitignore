@@ -1,0 +1,29 @@
+# Segredos e configuração local — NUNCA versionar (repositório público)
+.env
+.env.*
+!.env.example
+
+# Ambiente virtual
+.venv/
+venv/
+env/
+
+# Caches e artefatos de execução
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# Logs locais de execução
+logs/
+*.log
+
+# Editores e SO
+.idea/
+.vscode/
+*.swp
+.DS_Store

@@ -108,6 +108,22 @@ problema permitir, testar além do cenário ideal — falha bem investigada é e
 | Alérgenos ocultos em subprodutos | rótulo com *"malte"* e *"caseinato"* | alertas de glúten e lactose disparados citando o termo original |
 | Fora de escopo | mensagem de erro técnico ou receita caseira com instruções de preparo | interromper o fluxo e pedir correção da entrada, sem inventar análise |
 
+### Decisão de layout (registrada 2026-11-08)
+
+Pacote `src/` com responsabilidades separadas em módulos; **ponto de entrada = `src/app.py`**
+(decisão do aluno). Execução documentada como `python -m src.app`. Estrutura-alvo:
+
+```
+src/
+  __init__.py
+  app.py       # orquestra o ciclo de 4 passos (itens 4–5)
+  entrada.py   # validar_entrada()      — item 3
+  config.py    # carregar_config()      — item 4
+  llm.py       # preparar/enviar + processar resposta — itens 4–5
+tests/         # test_entrada, test_config, test_resposta
+pytest.ini     # pythonpath=. · testpaths=tests
+```
+
 ### Sequência de commits prevista
 
 Item concluído **somente** quando: commit aprovado pelo usuário e executado **+**
@@ -118,8 +134,15 @@ apresenta o resultado.
   e `.github/instructions/` versionados; varredura do staged diff sem cadeia de segredo.
   **Commit `fb6f7ab`** (2026-11-08): 4 arquivos, 643 inserções; varredura confirmou ausência de IP,
   hostname, endpoint ou chave institucional (apenas o nome público "Devel" e referência ao fórum).
-- [ ] 1. `chore: estrutura inicial, .gitignore e dependências declaradas` — `git ls-files` cobre `.gitignore`/`requirements.txt`; `.env` ausente do índice. O `.gitignore` já cobre `.env`, venv e caches desde aqui (decisão 0.7), não apenas no Intermediário.
-- [ ] 2. `test(basico): casos de entrada vazia e configuração ausente` (vermelhos) — `pytest` falha exatamente nesses dois casos.
+- [x] 1. `chore: estrutura inicial, .gitignore e dependências declaradas` — `git ls-files` cobre `.gitignore`/`requirements.txt`; `.env` ausente do índice. O `.gitignore` já cobre `.env`, venv e caches desde aqui (decisão 0.7), não apenas no Intermediário.
+  **Commit `ed88088`** (2026-11-08): `requirements.txt` (`openai` + `python-dotenv` + `pytest`) e
+  `.python-version` (`3.12`). Verificado: `git ls-files` cobre `.gitignore`/`requirements.txt`, `.env`
+  fora do índice, varredura de segredo limpa.
+- [x] 2. `test(basico): casos de entrada vazia e configuração ausente` (vermelhos) — `pytest` falha exatamente nesses dois casos.
+  **Layout adotado:** `src/` (`entrada.py`, `config.py`) + `tests/` + `pytest.ini` (`pythonpath=.`).
+  Stubs lançam `AssertionError` (não `NotImplementedError`, que é subclasse de `RuntimeError` e faria
+  os testes passarem por acidente). Evidência: `.venv/bin/python -m pytest -q` → **4 failed** (entrada
+  vazia, só-espacos, credencial ausente, não-expor-segredo), todos vermelhos pelo motivo correto.
 - [ ] 3. `feat(basico): leitura e validação da entrada textual` (+ testes verdes) — `test_entrada.py` verde.
 - [ ] 4. `feat(basico): preparo e envio da solicitação ao LLM com config externa` — chamada real responde (evidência "Entrada válida").
 - [ ] 5. `feat(basico): processamento e apresentação da resposta` — fluxo de 4 passos completo no terminal.

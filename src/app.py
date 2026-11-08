@@ -42,18 +42,14 @@ def ler_entrada_terminal() -> str:
 def apresentar(resultado: str) -> None:
     """Passo 4 do ciclo — apresenta o resultado processado ao usuário.
 
-    Isola a formatação da saída da orquestração em ``main()``: cabeçalho,
-    corpo da análise e um aviso fixo reforçando o caráter informacional
-    (decisão final permanece humana). Se o texto vier vazio, sinaliza com
+    Isola a formatação da saída da orquestração em ``main()``: cabeçalho e corpo
+    da análise. O aviso legal é emitido pelo próprio modelo no topo da resposta
+    (decisão 0.9), então aqui não se repete. Se o texto vier vazio, sinaliza com
     clareza em vez de imprimir nada.
     """
     print("\n==================== ANÁLISE DO RÓTULO ====================")
     print()
     print(resultado.strip() if resultado.strip() else "(o modelo não retornou conteúdo)")
-    print()
-    print("-----------------------------------------------------------")
-    print("Análise INFORMATIVA. Não substitui avaliação médica ou")
-    print("nutricional; confirme sempre na embalagem. Decisão final é sua.")
 
 
 def main() -> int:

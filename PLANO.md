@@ -53,6 +53,18 @@ Duração prevista do P0: 4–5 semanas.
   redirecionamento (`< arquivo`), o programa lê tudo de uma vez, sem exigir linha em branco
   (detectado via `sys.stdin.isatty()`). Esta decisão aparece no relatório como escolha de escopo
   com trade-off documentado.
+- [x] 0.9 **Decisão do contrato de saída (registrada 2026-11-08, a pedido do aluno).** O formato que o
+  LLM devolve é reescrito para leitura em terminal: a versão anterior era verbosa e prolixa (parágrafos
+  didáticos explicando noções óbvias, seções residuais repetidas, sem resumo rápido). Novo contrato,
+  imposto por `SYSTEM_PROMPT` (`src/llm.py`) e refletido em `apresentar()` (`src/app.py`):
+  1) aviso legal curto em bloco de citação; 2) resumo visual em linha única `[CONTÉM: ... | ATENÇÃO: ...]`;
+  2) Seção 1 — painel de alérgenos/restrições em bullets enxutos (só termo detectado + impacto em uma
+  linha), com subtópico para corantes sintéticos/críticos e outros pontos de atenção; 4) Seção 2 — tabela
+  Markdown com colunas fixas `Código INS | Ingrediente no Rótulo | Função Tecnológica | O que é / Descrição`,
+  com aviso explícito quando não há aditivo com INS; 5) interromper com erro se a entrada não for lista de
+  ingredientes; 6) sem conversação (sem saudação/introdução/despedida). Rigor técnico e referências legais
+  (Lei 10.674/2003, RDC 26/2015, códigos INS) preservados. Como o modelo ainda pode devolver texto longo,
+  o processamento offline passa a **limitar a largura** da saída no terminal (wrap), sem cortar conteúdo.
 
 **Problema escolhido:** Traduzir a lista de ingredientes de um produto
 industrializado — cheia de termos técnicos, códigos INS e subprodutos que mascaram
@@ -173,8 +185,9 @@ apresenta o resultado.
   bordas e colapso de 3+ quebras em no máximo 2, preservando parágrafos; não reinterpreta conteúdo.
   `src/app.py::apresentar()` (passo 4) isola a formatação da saída (cabeçalho + corpo + aviso fixo de
   caráter informacional) e sinaliza texto vazio sem imprimir nada. `main()` passa a orquestrar os 4
-  passos nomeados. Evidência: suíte → **6 passed**; `python -m src.app` via pipe com amostra fictícia
-  retornou painel de alertas + tabela de aditivos formatados e o aviso informacional — ciclo completo.
+  passos nomeados. Evidência: suíte → **6 passed**; smoke de `processar_resposta` confirma colapso de
+  quebras; `python -m src.app` via pipe com amostra fictícia retornou painel de alertas + tabela de
+  aditivos formatados e o aviso informacional — ciclo de 4 passos completo com chamada real.
 - [ ] 6. `test(basico): tratamento de resposta ausente com integração simulada` — `test_resposta.py` verde offline.
 - [ ] 7. `docs(basico): README com instalação, execução e justificativa do LLM` — README permite executar seguindo só o texto.
 - [ ] 8. `feat(basico): .env.example e cobertura do .gitignore` *(antecipado pelo decisão 0.7)* —

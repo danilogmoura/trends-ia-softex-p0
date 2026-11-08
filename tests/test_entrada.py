@@ -1,7 +1,9 @@
-"""Testes da validação de entrada (Nível Básico — item 2).
+"""Testes da validação de entrada (Nível Básico — itens 2 e 3).
 
 Doutrina do plano: todo requisito determinístico tem teste escrito ANTES do
-código. Estes casos falham de propósito até o item 3 implementar ``validar_entrada``.
+código. Estes casos foram redigidos no item 2 e hoje cobrem o ``validar_entrada``
+entregue no item 3 — bloqueiam entrada vazia/só-espacos, normalizam o caso feliz
+e barram texto longo antes de consumir a API.
 """
 
 import pytest

@@ -4,11 +4,15 @@ Escritos antes da implementação (TDD, doutrina do plano) e hoje cobrindo o
 ``carregar_config`` já entregue no item 4. Cenário obrigatório do enunciado:
 credencial ausente gera erro claro SEM expor segredo — validado offline, sem
 chamada real ao LLM.
+
+A asserção "não expõe segredo" vive dentro de ``test_credencial_ausente_gera_erro_claro``
+(e os testes de parâmetro inválido), que conferem que só o NOME da variável aparece na
+mensagem. Um caso separado para isso foi removido por redundância (decisão 0.17b).
 """
 
 import pytest
 
-from src import erros  # camada de tratamento ainda inexistente → torna este caso vermelho
+from src import erros
 from src.config import carregar_config
 
 
@@ -23,24 +27,6 @@ def test_credencial_ausente_gera_erro_claro(monkeypatch):
 
     # O erro deve apontar a variável faltante...
     assert "LLM_API_KEY" in str(excinfo.value)
-
-
-def test_erro_nao_expoe_valor_de_segredo(monkeypatch):
-    """A mensagem de erro jamais pode conter um valor de chave real.
-
-    Exige uma exceção de DOMÍNIO (KeyError/RuntimeError/ValueError) levantada pelo
-    próprio ``carregar_config``, garantindo que a falha é controlada e não um
-    vazio técnico — e que apenas o NOME da variável aparece, nunca o valor.
-    """
-    segredo = "sk-NAO-DEVE-APARECER-123456"
-    monkeypatch.setenv("LLM_BASE_URL", "http://localhost:9/v1")
-    monkeypatch.setenv("LLM_API_KEY", "")  # presente porém vazio → inválida
-    monkeypatch.setenv("LLM_MODEL", "modelo-teste")
-
-    with pytest.raises((KeyError, RuntimeError, ValueError)) as excinfo:
-        carregar_config(carregar_arquivo=False)
-
-    assert segredo not in str(excinfo.value)
 
 
 def test_config_malformed_base_url_invalida_vira_erro_claro(monkeypatch):

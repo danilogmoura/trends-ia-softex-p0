@@ -142,6 +142,30 @@ Duração prevista do P0: 4–5 semanas.
   logging é diagnóstico, não requisito funcional — um erro de digitação não deve derrubar a análise. Núcleo
   (`llm.analisar_ingredientes`, `app.main`) ganha apenas chamadas de log; nenhuma regra de negócio muda.
   Testes locais rodam **sem chamada real** ao LLM.
+- [x] 0.17 **Decisão da revisão da suíte para o item 3 do Avançado (registrada 2026-11-08, a pedido do aluno).**
+  Antes de escrever código do item 3, auditei os **39 testes** existentes em busca de excesso e de onde um mock
+  compensa. Constatações: (a) **nenhum** teste faz chamada real — todos offline, logo o requisito "≥1 teste local
+  sem chamada real" já está coberto; (b) há uma **redundância**: `test_config.py::test_erro_nao_expoe_valor_de_segredo`
+  só confirma que falta/vazio de credencial gera erro citando `LLM_API_KEY` — o mesmo que
+  `test_credencial_ausente_gera_erro_claro`; o valor-fantasma nem chega ao env, então a asserção é trivialmente
+  verdadeira. Decisão: **remover** esse caso (elimina duplicação sem perder cobertura). (c) A lacuna real é que
+  **nenhum teste exercita `app.main()`** nem as funções de borda (`ler_entrada_terminal`, `processar_resposta`,
+  `apresentar`) nem os códigos de saída (0/1/2/130). É exatamente o "**mock offline completo**" prometido pela
+  decisão 0.12 e reservado ao item 3. Decisão: criar `tests/test_app.py` com **mocks via `monkeypatch`** (padrão
+  mais leve que o fake-class de `test_rede.py`, adequado a substituir dependências de módulo) cobrindo: sucesso
+  ponta-a-ponta (exit 0), entrada vazia → exit 1, config ausente → exit 2, falha de LLM → exit 1, e Ctrl+C → exit
+  130. Assim o item 3 entrega integração offline substantiva em vez de mero registro formal. Escopo contido: nada
+  de nova lógica de negócio — só testes + remoção da redundância.
+- [x] 0.18 **Reanálise da suíte após criar `test_app.py` (registrada 2026-11-09, a pedido do aluno).**
+  Rodei os 45 testes e reli os seis arquivos procurando excesso. Conclusão: cada função pública tem exatamente um
+  teste direto na sua camada (`validar_entrada`, `carregar_config`, `chamar_llm`, `validar_resposta`, `logs.*`,
+  `main()`), sem sobreposição estrutural. Único candidato genuíno a remoção: `test_app.py::test_saida_nunca_contem_segredo_da_config`.
+  Com `analisar_ingredientes` mockado, o `api_key` da config nunca é lido nem impresso no fluxo, então a asserção
+  "segredo não aparece" passa **por construção**, não por comportamento testado; a proteção real contra vazar segredo
+  já mora em `test_logs.py::test_configuracao_para_log_omita_segredo_e_endpoint` e `test_rede.py::test_credencial_invalida_vira_erro_de_autenticacao_legivel`.
+  Decisão (opção A, aprovada pelo aluno): **remover** esse caso. Suíte final: **44 passed**, toda offline. Mantidos os
+  cinco caminhos de saída de `main()` (dois deles compartilham exit 2 — `ConfiguracaoAusenteError` e `ErroDeConfiguracao` —
+  mas são ramos distintos no código, logo ambos ficam).
 
 **Problema escolhido:** Traduzir a lista de ingredientes de um produto
 industrializado — cheia de termos técnicos, códigos INS e subprodutos que mascaram
@@ -381,7 +405,32 @@ enunciado só admite via integração simulada, o **teste offline** fica no Avan
   **Evidência:** três variáveis opcionais (`LLM_MAX_TOKENS`, `LLM_TEMPERATURE`, `LLM_TIMEOUT`) lidas em `config.py::_ler_parametros_geracao` e validadas em `erros.validar_parametros_geracao`; `chamar_llm` injeta `max_tokens`/`temperature` só quando presentes, e `llm.analisar_ingredientes` aplica `timeout` ao cliente. Ausentes → campo não enviado (padrão do provedor). Inválido → `ErroDeConfiguracao` com exit `2` citando nome+faixa, sem segredo. Núcleo (`SYSTEM_PROMPT`) intocado. TDD: +15 testes (11 vermelhos→verde em `test_config.py`/`test_rede.py`); suíte completa **27 passed**. Smoke: config válido tipado, ausente não injeta, `temperature=9`→exit 2 legível. Decisão 0.15 registrada.
 - [x] 2. `feat(avancado): registros de execução sem segredos nem dados pessoais` — log inspecionado não contém chave nem conteúdo sensível.
   **Evidência:** módulo novo `src/logs.py` (logger nomeado `p0`, handler único de **arquivo** gitignored, idempotente; fallback stderr se não puder escrever). `app.main` registra as etapas do ciclo; `llm.analisar_ingredientes` mede duração (`time.perf_counter`) e emite resumo com métricas. Conteúdo dos logs = **só** modelo/duração/nº mensagens/chars resposta — nunca entrada, resposta, `api_key` ou `base_url`. Caminho por `LLM_LOG_FILE` (padrão `logs/execucao.log`) e verbosidade por `LLM_LOG_LEVEL`; ausente/inválido → padrão e app continua (aviso, sem derrubar). TDD: +12 testes locais **sem chamada real** (`test_logs.py` 6, `test_config.py` 6); suíte completa **39 passed**. Smoke real: stdout só análise, stderr vazio, `logs/execucao.log` com os 5 registros, grep por `sk-|api_key|base_url|https?://` no arquivo = **nada**; `LLM_LOG_FILE=/proc/impossivel/x.log` → exit 0 com aviso+fallback. Decisão 0.16 registrada.
-- [ ] 3. `test(avancado): suíte local executável sem chamada real ao LLM` — `pytest` completo passa offline. Inclui o `test_resposta.py` de **resposta ausente/vazia com integração simulada**, movido do Básico pela decisão 0.10.
+- [x] 3. `test(avancado): suíte local executável sem chamada real ao LLM` — `pytest` completo passa offline, incluindo integração ponta-a-ponta de `app.main()` com mocks (decisão 0.17).
+  **Plano de execução:**
+  1. **Remover** a redundância `test_config.py::test_erro_nao_expoe_valor_de_segredo` (cobre o mesmo que
+     `test_credencial_ausente_gera_erro_claro`; decisão 0.17b).
+  2. **Criar `tests/test_app.py`** — integração offline de `main()` usando `monkeypatch.setattr` para isolar as
+     fronteiras (nenhuma rede, nenhum `.env` real):
+     - mockar `src.app.ler_entrada_terminal` → texto controlado;
+     - mockar `src.config.carregar_config` → dict mínimo válido (sem segredo);
+     - mockar `src.app.analisar_ingredientes` → resposta falsa de sucesso (ou lançar `ErroDeLlm` no caso de falha);
+     - capturar stdout/stderr e o código de saída retornado por `main()`.
+     Casos: **(i)** fluxo feliz → exit `0` + análise no stdout; **(ii)** entrada vazia (`ValueError`) → exit `1` +
+     mensagem `[entrada inválida]`; **(iii)** `ConfiguracaoAusenteError` → exit `2`; **(iv)** `ErroDeLlm` → exit `1` +
+     mensagem `[LLM]`; **(v)** `KeyboardInterrupt` → exit `130`.
+  3. Rodar a suíte completa **offline** (`pytest -q`) e registrar a contagem final.
+  **Critério de aceite:** suíte inteira verde sem nenhuma chamada real; os cinco caminhos de saída de `main()` cobertos;
+  decisão 0.12 encerrada (mock offline de resposta entregue). Evidência (contagem + cobertura) preenchida aqui ao fechar.
+  **Evidência:** removidos 2 testes redundantes (`test_config.py::test_erro_nao_expoe_valor_de_segredo`, decisão
+  0.17b; `test_app.py::test_saida_nunca_contem_segredo_da_config`, decisão 0.18 — passava por construção, pois com
+  `analisar_ingredientes` mockado o `api_key` nunca é lido/impresso; a proteção real de segredo já mora em
+  `test_logs.py` e `test_rede.py`) e criado `tests/test_app.py` com **6 testes de integração offline** de
+  `app.main()` via `monkeypatch` (fronteiras `ler_entrada_terminal`/`carregar_config`/`analisar_ingredientes`/
+  `logs.configurar` substituídas — nenhuma rede, nenhum `.env`, nenhum arquivo de log escrito). Cobrem os
+  **cinco caminhos de saída**: feliz→0 (análise no stdout, entrada normalizada), entrada vazia→1 (análise jamais
+  chamada), config ausente→2, erro de formato→2, falha de LLM→1 (`[LLM]` + mensagem humana), Ctrl+C→130. Reanálise
+  da suíte confirmou que cada função pública tem exatamente um teste direto na sua camada, sem sobreposição.
+  Suíte completa **44 passed** (39 − 1 + 6), toda offline. Decisão 0.12 encerrada (mock offline de resposta entregue).
 - [ ] 4. `chore(avancado): validação em ambiente limpo e correções registradas` — venv nova segue só o README; problemas/correções anotados no relatório.
 - [ ] 5. `docs(relatorio): decisões, evolução entre níveis, falhas, uso de IA e limitações` — relatório cobre os seis tópicos do vídeo.
 - [ ] 6. `docs(readme): versão do Python, bibliotecas e acesso aos artefatos` — README final revisado (sem duplicar relatório).

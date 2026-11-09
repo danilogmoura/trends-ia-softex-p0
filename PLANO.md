@@ -110,6 +110,14 @@ Duração prevista do P0: 4–5 semanas.
   nada de suíte mockada antecipada aqui. Justificativa do arquivo separado: falhas de rede exigem mockar o
   cliente OpenAI (infraestrutura distinta dos testes determinísticos de env var), então vão em `test_rede.py`
   em vez de misturar em `test_config.py`.
+- [x] 0.14 **Decisão de códigos de saída no tratamento de erros (registrada 2026-11-08, a pedido do aluno).**
+  O item 4 **não cria novos exit codes**. A família `ErroDeLlm` (autenticação, indisponibilidade, timeout,
+  resposta) cai no código `1` já existente (mesmo da entrada inválida); config ausente/inválida permanece `2`;
+  interrupção do usuário `130`. Justificativa: o princípio do curso pede a alternativa mais simples capaz de
+  resolver com qualidade, e um CLI textual local não precisa que um script externo diferencie "timeout" de
+  "auth" por número — a distinção vive na **mensagem humana** impressa no stderr (cada exceção carrega a sua
+  frase), exatamente o que o checklist exige ("mensagem compreensível", sem erro técnico extenso). Mapear cada
+  classe para um código próprio seria complexidade sem consequência do problema.
 
 **Problema escolhido:** Traduzir a lista de ingredientes de um produto
 industrializado — cheia de termos técnicos, códigos INS e subprodutos que mascaram

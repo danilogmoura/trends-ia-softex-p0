@@ -3,7 +3,7 @@
 Estas instruções se aplicam automaticamente a **todo** trabalho neste repositório.
 Cobrem os três níveis (Básico, Intermediário, Avançado) num único arquivo que evolui junto com o projeto.
 
-## >>> NÍVEL ATUAL: INTERMEDIÁRIO <<<
+## >>> NÍVEL ATUAL: AVANÇADO <<<
 
 Edite **apenas esta linha** conforme o projeto evoluir: `BÁSICO` → `INTERMEDIÁRIO` → `AVANÇADO`.
 Trabalhe **somente** na seção correspondente ao nível atual. Não antecipe exigências de níveis

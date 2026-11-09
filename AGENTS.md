@@ -3,7 +3,7 @@
 Estas instruções se aplicam automaticamente a **todo** trabalho neste repositório.
 Cobrem os três níveis (Básico, Intermediário, Avançado) num único arquivo que evolui junto com o projeto.
 
-## >>> NÍVEL ATUAL: BÁSICO <<<
+## >>> NÍVEL ATUAL: INTERMEDIÁRIO <<<
 
 Edite **apenas esta linha** conforme o projeto evoluir: `BÁSICO` → `INTERMEDIÁRIO` → `AVANÇADO`.
 Trabalhe **somente** na seção correspondente ao nível atual. Não antecipe exigências de níveis
@@ -22,7 +22,6 @@ O percurso deste aluno começa no **Bloco 0 (nivelamento)**. Datas do calendári
 | Projeto | Início | Entrega |
 | --- | --- | --- |
 | **P0** | 03/11/2026 | **06/12/2026** |
-| P1 (Bloco 1) | 07/12/2026 | 03/01/2027 |
 
 Planeje os três níveis (Básico → Intermediário → Avançado) dentro da janela do P0; a entrega
 oficial é uma única submissão no Moodle até **06/12/2026**. Fontes completas por bloco:

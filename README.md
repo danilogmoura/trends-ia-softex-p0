@@ -227,19 +227,54 @@ python -m pytest
 Saída esperada:
 
 ```text
-......                                            [100%]
-6 passed
+............                                      [100%]
+12 passed
 ```
 
 Cobertura atual:
 
 - `tests/test_entrada.py` — bloqueio de entrada vazia/só espaços, normalização e
   limite de tamanho.
-- `tests/test_config.py` — erro claro quando falta credencial e garantia de que a
-  mensagem de erro **não** expõe o valor de nenhum segredo.
+- `tests/test_config.py` — erro claro quando falta credencial ou a base URL é
+  inválida, e garantia de que a mensagem de erro **não** expõe o valor de nenhum
+  segredo.
+- `tests/test_rede.py` — credencial inválida, indisponibilidade e timeout, cada um
+  convertido em erro próprio de leitura curta.
+- `tests/test_resposta.py` — resposta vazia ou em formato inesperado rejeitada pela
+  camada de tratamento.
 
-> Os testes que usam **integração simulada** (resposta ausente/vazia sem chamada
-> real) entram na etapa Avançado, conforme o enunciado pede.
+### Testes simulados × chamada real
+
+Conforme o enunciado exige distinguir as duas naturezas:
+
+- **Todos os 12 testes acima são simulados** — rodam offline, sem rede. Eles usam
+  um *cliente falso* que lança exatamente as exceções do serviço (`AuthenticationError`,
+  `APIConnectionError`, `APITimeoutError`) e uma resposta artificial vazia/`None`,
+  para provar o tratamento controlado **sem** chamar o LLM nem expor qualquer chave.
+- **A chamada real ao LLM** é demonstrada à parte, executando a aplicação
+  (`python -m src.app`) com um `.env` válido: é ela que prova o funcionamento do
+  fluxo completo contra o serviço escolhido. Nenhum teste automatizado usa
+  credencial real.
+
+## Tratamento de erros (Nível Intermediário)
+
+A aplicação encerra de forma controlada nos cenários previsíveis, imprimindo no
+`stderr` uma frase curta — nunca um *traceback* técnico — e reaproveitando os
+códigos de saída já existentes (decisão registrada no plano):
+
+| Cenário | Prefixo no `stderr` + início da mensagem real | Saída |
+| --- | --- | --- |
+| Configuração ausente/incompleta | `[configuração] Configuração do LLM incompleta. Defina ... a(s) variável(is): LLM_API_KEY` | `2` |
+| Base URL inválida | `[configuração] A variável LLM_BASE_URL não contém uma URL válida` | `2` |
+| Credencial inválida | `[LLM] A credencial do LLM foi recusada (autenticação inválida)` | `1` |
+| Indisponibilidade / falha de comunicação | `[LLM] Não foi possível falar com o LLM — serviço indisponível ou conexão recusada` | `1` |
+| Timeout | `[LLM] O LLM demorou demais para responder (tempo esgotado)` | `1` |
+| Resposta vazia/formato inesperado | `[LLM] O LLM não retornou conteúdo (resposta vazia ou em formato inesperado)` | `1` |
+| Entrada vazia | `[entrada inválida]` com orientação para colar a lista | `1` |
+| Interrupção (Ctrl+C) | `Execução interrompida pelo usuário.` | `130` |
+
+Nenhuma dessas mensagens contém chave, token, endpoint real ou dado pessoal — só o
+**nome** da variável ou uma descrição genérica do problema.
 
 ## Estrutura do repositório
 
@@ -248,10 +283,13 @@ src/
   app.py        # ponto de entrada — orquestra os 4 passos (python -m src.app)
   entrada.py    # passo 1: captura e validação da entrada textual
   config.py     # carregamento da configuração sensível (.env), sem expor valores
+  erros.py      # camada de tratamento: traduz falhas do serviço em erros legíveis
   llm.py        # passos 2–3: prepara/envia a solicitação e processa a resposta
 tests/
   test_entrada.py
   test_config.py
+  test_rede.py
+  test_resposta.py
 .env.example    # modelo das variáveis de ambiente (sem valores reais)
 requirements.txt
 pytest.ini
@@ -270,10 +308,11 @@ pytest.ini
 
 - Ferramenta **informacional**: não substitui avaliação médica/nutricional; a
   decisão final é humana.
-- Depende da disponibilidade do serviço de LLM escolhido; indisponibilidade ou
-  resposta vazia são sinalizadas, mas não há fallback offline.
-- No Nível Básico, erros de comunicação/timeout ainda são propagados como exceção
-  técnica; o tratamento controlado dessas falhas é evolução prevista para o nível
-  Intermediário.
+- Depende da disponibilidade do serviço de LLM escolhido; indisponibilidade,
+  timeout ou resposta vazia são sinalizados com mensagem clara, mas não há fallback
+  offline.
+- No Nível Intermediário os sete cenários previsíveis já são tratados de forma
+  controlada (ver seção *Tratamento de erros*); permanecem fora de escopo retries
+  automáticos e cache local de respostas.
 - A qualidade da análise reflete o modelo configurado; resultados podem variar
   entre modelos e versões.

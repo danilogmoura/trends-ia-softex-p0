@@ -89,6 +89,35 @@ Duração prevista do P0: 4–5 semanas.
   relatório final registra-se apenas que houve substituição por provedor externo compatível e o porquê
   (instabilidade do institucional), sem dados restritos. Se o serviço institucional voltar a ficar estável,
   basta reescrever as três variáveis do `.env` para retomá-lo, sem tocar em código.
+- [x] 0.12 **Decisão de divisão "tratar × testar" a resposta vazia (registrada 2026-11-08, a pedido do aluno).**
+  O checklist do Nível Intermediário exige *tratar* "resposta vazia ou em formato inesperado" com mensagem
+  compreensível; a decisão 0.10 moveu o *teste com mock* dessa situação para o Avançado. Não há contradição:
+  são dois artefatos distintos. No **Intermediário** implementa-se o **tratamento** (código que detecta corpo
+  vazio/formato inesperado na chamada real e encerra com orientação legível, sem stack trace). No **Avançado**
+  entra o **teste local offline** (`test_resposta.py`) que exercita esse mesmo tratamento por integração
+  simulada, sem rede. Consequência: o item 4 do Intermediário cobre o tratamento de todos os seis cenários da
+  matriz (incluindo resposta vazia); o item 3 do Avançado mantém o mock. Assim cada requisito de erro do
+  checklist tem implementação no nível onde é cobrado e teste no nível onde o enunciado pede evidência offline.
+- [x] 0.13 **Decisão de amplitude dos testes vermelhos do item 2 (registrada 2026-11-08, a pedido do aluno).**
+  O título original do item 2 nomeava apenas três cenários (credencial inválida, indisponibilidade, timeout),
+  mas o item 4 se compromete a deixar **verdes** os seis da matriz de erros. Para que todo teste verde tenha
+  um vermelho correspondente escrito antes, o item 2 passa a cobrir os **seis** cenários, distribuídos por
+  arquivo: `test_rede.py` (novo — credencial inválida, indisponibilidade, timeout, via cliente simulado que
+  lança as exceções reais da lib `openai`), extensão de `test_config.py` (config malformed / variável inválida)
+  e `test_resposta.py` (**apenas o tratamento de corpo vazio/formato inesperado observado numa chamada real**).
+  Fronteira preservada com o Avançado: o **teste offline puramente simulado** de resposta ausente/vazia
+  (`test_resposta.py` completo, sem nenhuma chamada de rede) permanece no item 3 do Avançado (decisão 0.12);
+  nada de suíte mockada antecipada aqui. Justificativa do arquivo separado: falhas de rede exigem mockar o
+  cliente OpenAI (infraestrutura distinta dos testes determinísticos de env var), então vão em `test_rede.py`
+  em vez de misturar em `test_config.py`.
+- [x] 0.14 **Decisão de códigos de saída no tratamento de erros (registrada 2026-11-08, a pedido do aluno).**
+  O item 4 **não cria novos exit codes**. A família `ErroDeLlm` (autenticação, indisponibilidade, timeout,
+  resposta) cai no código `1` já existente (mesmo da entrada inválida); config ausente/inválida permanece `2`;
+  interrupção do usuário `130`. Justificativa: o princípio do curso pede a alternativa mais simples capaz de
+  resolver com qualidade, e um CLI textual local não precisa que um script externo diferencie "timeout" de
+  "auth" por número — a distinção vive na **mensagem humana** impressa no stderr (cada exceção carrega a sua
+  frase), exatamente o que o checklist exige ("mensagem compreensível", sem erro técnico extenso). Mapear cada
+  classe para um código próprio seria complexidade sem consequência do problema.
 
 **Problema escolhido:** Traduzir a lista de ingredientes de um produto
 industrializado — cheia de termos técnicos, códigos INS e subprodutos que mascaram
@@ -265,26 +294,44 @@ Atualizar linha **NÍVEL ATUAL** → `INTERMEDIÁRIO`.
 
 ## Nível 2 — INTERMEDIÁRIO (organização e tratamento de erros)
 
-**Objetivo:** amadurecer a **mesma** aplicação — separar responsabilidades e fechar
-a matriz de erros.
+**Objetivo:** amadurecer a **mesma** aplicação — refinar as fronteiras entre módulos e
+fechar a **matriz completa de erros** exigida pelo checklist do `AGENTS.md`.
 
-### Testes primeiro
+> A separação de responsabilidades já foi construída no Básico (`src/entrada.py`,
+> `config.py`, `llm.py`, `app.py`). Aqui ela é **refinada à luz dos erros**, não refeita do zero
+> (evita refactor fake). Ver item 3.
 
-| Teste | Cenário coberto | Evidência mínima |
-| --- | --- | --- |
-| `test_config.py` (extensão) | credencial inválida → encerramento controlado | "Credencial inválida" |
-| `test_rede.py` | falha de comunicação e timeout → mensagem compreensível | "Falha de comunicação" |
-| `test_resposta.py` (extensão) | resposta em formato inesperado | matriz de erros |
+### Matriz de erros (mapeada 1:1 ao checklist Intermediário)
+
+Todo cenário abaixo é **tratado** no Intermediário (item 4) com mensagem compreensível, sem
+stack trace crua nem segredo exposto. Os testes nomeados exercitam o tratamento; quando o
+enunciado só admite via integração simulada, o **teste offline** fica no Avançado (decisão 0.12).
+
+| # | Cenário (checklist) | Como é demonstrado no Intermediário | Evidência |
+| --- | --- | --- | --- |
+| 1 | Configuração ausente ou inválida | `test_config.py` (estende o do Básico): variável faltando ou malformed → erro claro citando só o nome | "config ausente/inválida" |
+| 2 | Credencial ausente | `test_config.py`: `LLM_API_KEY` vazio → encerramento controlado, sem vazar valor | "credencial ausente" |
+| 3 | Credencial inválida | `test_rede.py` com cliente simulado: API devolve 401 → mensagem de autenticação, sem ecoar chave | "credencial inválida" |
+| 4 | Indisponibilidade do LLM | `test_rede.py`: API devolve 5xx / conexão recusada → orienta tentar mais tarde | "indisponibilidade" |
+| 5 | Falha de comunicação / timeout | `test_rede.py`: exceção de rede / estouro de prazo → distingue timeout de queda | "falha de comunicação · timeout" |
+| 6 | Resposta vazia ou formato inesperado | `test_resposta.py` (chamada real pode vir vazia): corpo ausente/inesperado → tratamento legível; **teste offline** no Avançado (0.12) | "resposta vazia/formato inesperado" |
 
 ### Sequência de commits prevista (branch + PR obrigatórios)
 
-- [ ] 1. branch `intermediario/tratamento-erros` criada a partir de `p0-basico`.
-- [ ] 2. `test(intermediario): credencial inválida, indisponibilidade e timeout` (vermelhos) — `pytest` falha nesses casos.
-- [ ] 3. `refactor(intermediario): separar entrada, config, solicitação, chamada, resposta e saída` — testes do Básico continuam verdes (sem regressão).
-- [ ] 4. `feat(intermediario): tratamento controlado da matriz de erros` (+ testes verdes) — `test_rede.py` e extensões verdes; nenhuma mensagem crua de exceção.
-- [ ] 5. `test(intermediario): consistência entre`.env.example` e as variáveis lidas por `config.py`` — artefatos criados no Básico (decisão 0.7); aqui apenas se confere que todo nome declarado no template é de fato consumido pelo código, e que nenhum valor real aparece.
-- [ ] 6. `docs(intermediario): exemplos de entrada/saída e distinção testes reais × simulados` — README atualizado.
-- [ ] 7. PR → merge para `main` — PR linkado no histórico.
+- [x] 1. branch `intermediario/tratamento-erros` criada a partir do estado entregue do Básico
+  (HEAD `8a597da`, mesmo commit da tag `p0-basico`). **Evidência:** primeiro commit aprovado na
+  branch — `33d0618` (`docs(plano): amplitude dos testes vermelhos do item 2 — decisão 0.13`).
+- [x] 2. `test(intermediario): bateria vermelha da matriz de erros (6 cenários)` — `pytest` falha nos casos ainda não tratados, distribuídos por arquivo (decisão 0.13): `test_rede.py` novo (credencial inválida → 401, indisponibilidade → 5xx/conexão recusada, timeout) usando cliente simulado que lança as exceções reais da lib `openai`; extensão de `test_config.py` (config malformed / variável inválida); `test_resposta.py` só para o tratamento de corpo vazio/formato inesperado numa chamada real. Vermelhos pelo motivo correto: importam a camada de tratamento (`src/erros.py`) que ainda não existe. O **mock offline completo** fica reservado ao Avançado (decisão 0.12).
+  **Evidência:** commit `f7d2e7c` — 3 collection errors por `ImportError: cannot import name 'erros' from 'src'` (vermelho pelo motivo certo); `test_entrada.py` segue com 4 passed (sem regressão).
+- [x] 3. `refactor(intermediario): refinar fronteiras entre módulos à luz da matriz de erros` — extração do tratamento de exceções para camada própria (ex.: separar mapeamento de erro de rede/resposta dentro de `llm.py`), sem reorganizar o que o Básico já modularizou. Testes do Básico continuam verdes (sem regressão).
+  **Evidência:** commit `e77fa24` — `src/erros.py` com `ErroDeLlm` + 5 subclasses e as assinaturas `chamar_llm`/`validar_resposta`/`validar_configuracao` (corpos em `NotImplementedError`, preenchidos no item 4). Nenhum módulo do Básico alterado; suíte passa de `ImportError` a `NotImplementedError` → 6 verdes / 6 vermelhos.
+- [x] 4. `feat(intermediario): tratamento controlado da matriz de erros` (+ testes verdes) — cobre os **seis** cenários da matriz acima; `test_rede.py` e extensões de `test_config.py`/`test_resposta.py` verdes; nenhuma mensagem crua de exceção; nenhum segredo exposto.
+  **Evidência:** commit `982ac3e` — `chamar_llm` traduz as exceções do cliente OpenAI em `ErroDeAutenticacao`/`ErroTimeout`/`ErroIndisponibilidade`/status≥500; `validar_resposta` rejeita vazia/formato inesperado; `validar_configuracao` confere a URL sem expor a chave; `app.py` roteia cada família para mensagem curta no stderr com exit code existente (decisão 0.14). Suíte: **12 passed**. Smoke: base URL malformada → `[configuração]` exit 2; porta morta → `[LLM]` exit 1.
+- [x] 5. `test(intermediario): consistência entre`.env.example` e as variáveis lidas por `config.py`` — artefatos criados no Básico (decisão 0.7); aqui apenas se confere que todo nome declarado no template é de fato consumido pelo código, e que nenhum valor real aparece.
+  **Evidência:** cotejo por comando — nomes declarados em `.env.example` (`LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`) são idênticos aos lidos em `src/config.py::VARIAVEIS_OBRIGATORIAS`; nenhum sobra nem falta dos dois lados. Scan do template contra padrões de segredo → LIMPO (só placeholders: `substitua-pelo-endpoint-do-servico`, `cole-aqui-sua-chave-sem-publicar`, `substitua-pelo-nome-do-modelo`). Sem código novo; verificação concluída sem commit próprio (registrada aqui).
+- [x] 6. `docs(intermediario): exemplos de entrada/saída e distinção testes reais × simulados` — README atualizado.
+  **Evidência:** README ganhou a seção *Testes simulados × chamada real* (os 12 testes rodam offline com cliente falso; a chamada real é demonstrada só via `python -m src.app`, sem credencial em teste), a tabela *Tratamento de erros* com as mensagens literais do código e seus exit codes, contagem corrigida para `12 passed`, cobertura dos quatro arquivos de teste, estrutura com `erros.py` + novos testes, e limitação antiga ("timeout propaga exceção técnica") substituída pelo estado real do Intermediário. Exemplo de entrada/saída já presente desde o Básico foi mantido.
+- [ ] 7. PR → merge para `master` (branch real do repositório) — PR linkado no histórico.
 
 **Gate de saída:** checklist Intermediário do `AGENTS.md` completo → tag
 `p0-intermediario`. Atualizar **NÍVEL ATUAL** → `AVANÇADO`.

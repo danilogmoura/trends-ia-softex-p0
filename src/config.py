@@ -9,6 +9,8 @@ import os
 
 from dotenv import load_dotenv
 
+from . import erros
+
 # Nomes das variáveis obrigatórias (decisão 0.6). Os VALORES nunca são lidos
 # para log nem incluídos em mensagens de erro — apenas os NOMES faltantes.
 VARIAVEIS_OBRIGATORIAS = ("LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL")
@@ -50,9 +52,11 @@ def carregar_config(*, carregar_arquivo: bool = True) -> dict:
             "Consulte o .env.example para os nomes esperados."
         )
 
-    return {
-        "base_url": os.environ["LLM_BASE_URL"].strip(),
-        "api_key": os.environ["LLM_API_KEY"].strip(),
-        "model": os.environ["LLM_MODEL"].strip(),
-    }
+    return erros.validar_configuracao(
+        {
+            "base_url": os.environ["LLM_BASE_URL"].strip(),
+            "api_key": os.environ["LLM_API_KEY"].strip(),
+            "model": os.environ["LLM_MODEL"].strip(),
+        }
+    )
 

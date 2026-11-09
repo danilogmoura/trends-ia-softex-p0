@@ -11,6 +11,8 @@ import textwrap
 
 from openai import OpenAI
 
+from . import erros
+
 # Prompt do sistema: define o papel informacional, o contrato de saída concisa
 # para terminal (decisão 0.9) e o limite anti-diagnóstico (decisão final humana).
 SYSTEM_PROMPT = (
@@ -62,24 +64,13 @@ def analisar_ingredientes(entrada_validada: str, config: dict) -> str:
     """Envia a solicitação ao LLM configurado e retorna o texto da resposta.
 
     ``config`` vem de :func:`src.config.carregar_config` (base_url, api_key, model).
-    Nenhum valor sensível é impresso aqui; erros de conexão são propagados ao
-    chamador (tratamento controlado vem no Nível Intermediário).
+    Nenhum valor sensível é impresso aqui. O contato com a API e a tradução de
+    falhas ficam na camada :mod:`src.erros` (Nível Intermediário): este módulo só
+    monta o cliente e delega — as exceções técnicas da lib ``openai`` nunca vazam
+    para o chamador, que recebe sempre uma :class:`src.erros.ErroDeLlm` legível.
     """
     cliente = OpenAI(base_url=config["base_url"], api_key=config["api_key"])
-
-    resposta = cliente.chat.completions.create(
-        model=config["model"],
-        messages=preparar_mensagens(entrada_validada),
-    )
-
-    # Resposta pode vir sem conteúdo (choice ausente ou message vazia). Aqui
-    # apenas extraímos o texto quando presente, devolvendo string vazia quando
-    # não há. O tratamento controlado dessa ausência (erro claro + teste com
-    # integração simulada) pertence aos níveis Intermediário/Avançado — ver
-    # decisão 0.10; no Básico a chamada é real.
-    escolha = resposta.choices[0] if resposta.choices else None
-    conteudo = escolha.message.content if escolha and escolha.message else None
-    return conteudo or ""
+    return erros.chamar_llm(cliente, config, preparar_mensagens(entrada_validada))
 
 
 # Largura máxima de coluna para o texto do terminal (decisão 0.9). Evita que o

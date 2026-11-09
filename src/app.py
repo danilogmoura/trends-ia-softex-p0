@@ -13,6 +13,7 @@ import sys
 
 from .config import ConfiguracaoAusenteError, carregar_config
 from .entrada import validar_entrada
+from .erros import ErroDeConfiguracao, ErroDeLlm
 from .llm import analisar_ingredientes, processar_resposta
 
 
@@ -64,6 +65,17 @@ def main() -> int:
     except ConfiguracaoAusenteError as erro:
         print(f"\n[configuração] {erro}", file=sys.stderr)
         return 2
+    except ErroDeConfiguracao as erro:
+        # Formato inválido (ex.: base_url malformada) — mesma família de config,
+        # mesmo código de saída (decisão 0.14).
+        print(f"\n[configuração] {erro}", file=sys.stderr)
+        return 2
+    except ErroDeLlm as erro:
+        # Falha de comunicação com o serviço externo (auth, indisponibilidade,
+        # timeout, resposta). Mensagem humana já vem pronta na exceção; cai no
+        # código 1 sem criar sinal novo por classe (decisão 0.14).
+        print(f"\n[LLM] {erro}", file=sys.stderr)
+        return 1
     except ValueError as erro:
         print(f"\n[entrada inválida] {erro}", file=sys.stderr)
         return 1

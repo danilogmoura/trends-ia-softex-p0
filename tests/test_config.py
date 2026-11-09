@@ -8,6 +8,7 @@ chamada real ao LLM.
 
 import pytest
 
+from src import erros  # camada de tratamento ainda inexistente → torna este caso vermelho
 from src.config import carregar_config
 
 
@@ -40,3 +41,21 @@ def test_erro_nao_expoe_valor_de_segredo(monkeypatch):
         carregar_config(carregar_arquivo=False)
 
     assert segredo not in str(excinfo.value)
+
+
+def test_config_malformed_base_url_invalida_vira_erro_claro(monkeypatch):
+    """Cenário 1 da matriz: variável presente porém inválida (base_url malformada).
+
+    Hoje `carregar_config` só checa presença — uma base_url vazia-de-conteúdo mas
+    não-vazia passa. O tratamento de formato é do Intermediário (item 4): deve
+    levantar erro de domínio claro, sem despejar stack trace nem expor valores.
+    """
+    monkeypatch.setenv("LLM_BASE_URL", "nao-e-uma-url-valida")
+    monkeypatch.setenv("LLM_API_KEY", "chave-falsa-de-teste")
+    monkeypatch.setenv("LLM_MODEL", "modelo-teste")
+
+    with pytest.raises(erros.ErroDeConfiguracao) as excinfo:
+        carregar_config(carregar_arquivo=False)
+
+    assert "LLM_BASE_URL" in str(excinfo.value)
+    assert "chave-falsa-de-teste" not in str(excinfo.value)

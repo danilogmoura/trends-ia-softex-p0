@@ -310,7 +310,9 @@ enunciado só admite via integração simulada, o **teste offline** fica no Avan
 
 ### Sequência de commits prevista (branch + PR obrigatórios)
 
-- [ ] 1. branch `intermediario/tratamento-erros` criada a partir de `p0-basico`.
+- [x] 1. branch `intermediario/tratamento-erros` criada a partir do estado entregue do Básico
+  (HEAD `8a597da`, mesmo commit da tag `p0-basico`). **Evidência:** primeiro commit aprovado na
+  branch — `33d0618` (`docs(plano): amplitude dos testes vermelhos do item 2 — decisão 0.13`).
 - [ ] 2. `test(intermediario): bateria vermelha da matriz de erros (6 cenários)` — `pytest` falha nos casos ainda não tratados, distribuídos por arquivo (decisão 0.13): `test_rede.py` novo (credencial inválida → 401, indisponibilidade → 5xx/conexão recusada, timeout) usando cliente simulado que lança as exceções reais da lib `openai`; extensão de `test_config.py` (config malformed / variável inválida); `test_resposta.py` só para o tratamento de corpo vazio/formato inesperado numa chamada real. Vermelhos pelo motivo correto: importam a camada de tratamento (`src/erros.py`) que ainda não existe. O **mock offline completo** fica reservado ao Avançado (decisão 0.12).
 - [ ] 3. `refactor(intermediario): refinar fronteiras entre módulos à luz da matriz de erros` — extração do tratamento de exceções para camada própria (ex.: separar mapeamento de erro de rede/resposta dentro de `llm.py`), sem reorganizar o que o Básico já modularizou. Testes do Básico continuam verdes (sem regressão).
 - [ ] 4. `feat(intermediario): tratamento controlado da matriz de erros` (+ testes verdes) — cobre os **seis** cenários da matriz acima; `test_rede.py` e extensões de `test_config.py`/`test_resposta.py` verdes; nenhuma mensagem crua de exceção; nenhum segredo exposto.

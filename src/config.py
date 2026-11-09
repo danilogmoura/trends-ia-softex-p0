@@ -9,7 +9,7 @@ import os
 
 from dotenv import load_dotenv
 
-from . import erros
+from . import erros, logs
 
 # Nomes das variáveis obrigatórias (decisão 0.6). Os VALORES nunca são lidos
 # para log nem incluídos em mensagens de erro — apenas os NOMES faltantes.
@@ -58,7 +58,38 @@ def carregar_config(*, carregar_arquivo: bool = True) -> dict:
             "api_key": os.environ["LLM_API_KEY"].strip(),
             "model": os.environ["LLM_MODEL"].strip(),
         }
-    ) | _ler_parametros_geracao()
+    ) | _ler_parametros_geracao() | _ler_config_logs()
+
+
+def _ler_config_logs() -> dict:
+    """Lê as variáveis de registro (Avançado — item 2) e normaliza para a config.
+
+    Trata duas variáveis **opcionais** e **tolerantes**, ambas de diagnóstico:
+
+    - ``LLM_LOG_LEVEL``: ausente → sem chave (app usa INFO); válido → injeta
+      ``log_level`` maiúsculo; desconhecido → **não derruba** a app, retorna vazio
+      e :func:`src.logs.nivel_efetivo` avisa no stderr ao configurar o logger.
+    - ``LLM_LOG_FILE``: ausente/vazio → sem chave (app usa o padrão
+      ``logs/execucao.log``); presente → injeta ``log_file`` com o caminho tal
+      como dado. Não há validação de conteúdo: é só um caminho, e um caminho
+      inválido é tratado por :func:`src.logs.configurar` (fallback stderr).
+
+    Coerente com o Intermediário: um erro de digitação em configuração de log
+    não impede o fluxo principal nem despeja stack trace.
+    """
+    resultado: dict = {}
+
+    nivel_bruto = (os.environ.get("LLM_LOG_LEVEL") or "").strip()
+    if nivel_bruto:
+        candidato = nivel_bruto.upper()
+        if candidato in logs._NIVEIS_VALIDOS:
+            resultado["log_level"] = candidato
+
+    arquivo_bruto = (os.environ.get("LLM_LOG_FILE") or "").strip()
+    if arquivo_bruto:
+        resultado["log_file"] = arquivo_bruto
+
+    return resultado
 
 
 def _ler_parametros_geracao() -> dict:

@@ -144,3 +144,57 @@ def test_parametro_invalido_gera_erro_claro_sem_valor_cru(monkeypatch, var, valo
         carregar_config(carregar_arquivo=False)
 
     assert var in str(excinfo.value)
+
+
+# --- Nível Avançado, item 2: nível de log controlável por configuração externa ---
+
+
+def test_log_level_valido_vem_na_config(monkeypatch):
+    """LLM_LOG_LEVEL com nome válido é normalizado para MAIÚSCULAS no config."""
+    _ambiente_base_ok(monkeypatch)
+    monkeypatch.setenv("LLM_LOG_LEVEL", "debug")
+
+    config = carregar_config(carregar_arquivo=False)
+
+    assert config["log_level"] == "DEBUG"
+
+
+def test_log_level_ausente_nao_injeta_chave(monkeypatch):
+    """Sem LLM_LOG_LEVEL, a chave não aparece — app usa o padrão interno (INFO)."""
+    _ambiente_base_ok(monkeypatch)
+    monkeypatch.delenv("LLM_LOG_LEVEL", raising=False)
+
+    config = carregar_config(carregar_arquivo=False)
+
+    assert "log_level" not in config
+
+
+def test_log_file_vem_na_config(monkeypatch):
+    """LLM_LOG_FILE presente injeta ``log_file`` com o caminho tal como dado."""
+    _ambiente_base_ok(monkeypatch)
+    monkeypatch.delenv("LLM_LOG_FILE", raising=False)
+    assert "log_file" not in carregar_config(carregar_arquivo=False)
+
+    monkeypatch.setenv("LLM_LOG_FILE", "/var/log/p0/app.log")
+    config = carregar_config(carregar_arquivo=False)
+    assert config["log_file"] == "/var/log/p0/app.log"
+
+
+@pytest.mark.parametrize("valor", ["GRITA", "verbose", ""])
+def test_log_level_invalido_e_tolerado_sem_derrubar_a_app(monkeypatch, valor):
+    """LLM_LOG_LEVEL inválido NÃO derruba a aplicação (diagnóstico ≠ requisito).
+
+    A config apenas não injeta ``log_level``; o aviso legível fica a cargo de
+    :func:`src.logs.nivel_efetivo` ao configurar o logger. Vazio é ausente.
+    Coerente com o Intermediário: um erro de digitação no nível não impede o
+    fluxo principal nem despeja stack trace.
+    """
+    _ambiente_base_ok(monkeypatch)
+    if valor == "":
+        monkeypatch.delenv("LLM_LOG_LEVEL", raising=False)
+    else:
+        monkeypatch.setenv("LLM_LOG_LEVEL", valor)
+
+    config = carregar_config(carregar_arquivo=False)
+
+    assert "log_level" not in config

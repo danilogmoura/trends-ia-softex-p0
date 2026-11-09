@@ -128,6 +128,20 @@ Duração prevista do P0: 4–5 semanas.
   da config (decisão 0.14, sem código novo). `timeout` é aplicado ao *cliente* OpenAI (não ao corpo do request);
   `max_tokens`/`temperature` são injetados por `chamar_llm` quando presentes. O `SYSTEM_PROMPT` e a lógica de
   análise permanecem intactos — muda só a requisição.
+- [x] 0.16 **Decisão do registro de execução no Avançado (registrada 2026-11-08, item 2).**
+  O enunciado pede "registros simples de execução" **sem** chave, token, credencial, dado pessoal ou conteúdo
+  sensível desnecessário. Escolhas do aluno: destino = **arquivo local gitignored** (`logs/execucao.log`), a
+  pedido — mantém o terminal limpo só com a análise e não envia log ao GitHub; volume = **detalhado com
+  métricas**; nível/caminho = **controláveis por env**. Implementação: módulo novo `src/logs.py` com um logger
+  nomeado (`p0`) e handler único de arquivo, idempotente; se o arquivo não puder ser criado, aviso + fallback
+  stderr. Registram-se as etapas do ciclo + métricas da chamada (modelo, duração ms via `time.perf_counter`, nº
+  de mensagens, caracteres da resposta) — **nunca** o texto da entrada/resposta, a `api_key` nem a `base_url`.
+  Duas funções de sanitização testadas (`resumo_de_chamada`, `configuracao_para_log`). Verbosidade e caminho
+  por duas variáveis externas (`LLM_LOG_LEVEL`, `LLM_LOG_FILE`), coerente com o item 1. Política de erro
+  **tolerante**: ausente/inválido/caminho ruim → usa padrão e **continua rodando** (só um aviso), porque
+  logging é diagnóstico, não requisito funcional — um erro de digitação não deve derrubar a análise. Núcleo
+  (`llm.analisar_ingredientes`, `app.main`) ganha apenas chamadas de log; nenhuma regra de negócio muda.
+  Testes locais rodam **sem chamada real** ao LLM.
 
 **Problema escolhido:** Traduzir a lista de ingredientes de um produto
 industrializado — cheia de termos técnicos, códigos INS e subprodutos que mascaram
@@ -365,7 +379,8 @@ enunciado só admite via integração simulada, o **teste offline** fica no Avan
 
 - [x] 1. `feat(avancado): parâmetros do LLM ajustáveis por configuração externa` — mudar token/temperatura no `.env` altera a requisição sem editar código.
   **Evidência:** três variáveis opcionais (`LLM_MAX_TOKENS`, `LLM_TEMPERATURE`, `LLM_TIMEOUT`) lidas em `config.py::_ler_parametros_geracao` e validadas em `erros.validar_parametros_geracao`; `chamar_llm` injeta `max_tokens`/`temperature` só quando presentes, e `llm.analisar_ingredientes` aplica `timeout` ao cliente. Ausentes → campo não enviado (padrão do provedor). Inválido → `ErroDeConfiguracao` com exit `2` citando nome+faixa, sem segredo. Núcleo (`SYSTEM_PROMPT`) intocado. TDD: +15 testes (11 vermelhos→verde em `test_config.py`/`test_rede.py`); suíte completa **27 passed**. Smoke: config válido tipado, ausente não injeta, `temperature=9`→exit 2 legível. Decisão 0.15 registrada.
-- [ ] 2. `feat(avancado): registros de execução sem segredos nem dados pessoais` — log inspecionado não contém chave nem conteúdo sensível.
+- [x] 2. `feat(avancado): registros de execução sem segredos nem dados pessoais` — log inspecionado não contém chave nem conteúdo sensível.
+  **Evidência:** módulo novo `src/logs.py` (logger nomeado `p0`, handler único de **arquivo** gitignored, idempotente; fallback stderr se não puder escrever). `app.main` registra as etapas do ciclo; `llm.analisar_ingredientes` mede duração (`time.perf_counter`) e emite resumo com métricas. Conteúdo dos logs = **só** modelo/duração/nº mensagens/chars resposta — nunca entrada, resposta, `api_key` ou `base_url`. Caminho por `LLM_LOG_FILE` (padrão `logs/execucao.log`) e verbosidade por `LLM_LOG_LEVEL`; ausente/inválido → padrão e app continua (aviso, sem derrubar). TDD: +12 testes locais **sem chamada real** (`test_logs.py` 6, `test_config.py` 6); suíte completa **39 passed**. Smoke real: stdout só análise, stderr vazio, `logs/execucao.log` com os 5 registros, grep por `sk-|api_key|base_url|https?://` no arquivo = **nada**; `LLM_LOG_FILE=/proc/impossivel/x.log` → exit 0 com aviso+fallback. Decisão 0.16 registrada.
 - [ ] 3. `test(avancado): suíte local executável sem chamada real ao LLM` — `pytest` completo passa offline. Inclui o `test_resposta.py` de **resposta ausente/vazia com integração simulada**, movido do Básico pela decisão 0.10.
 - [ ] 4. `chore(avancado): validação em ambiente limpo e correções registradas` — venv nova segue só o README; problemas/correções anotados no relatório.
 - [ ] 5. `docs(relatorio): decisões, evolução entre níveis, falhas, uso de IA e limitações` — relatório cobre os seis tópicos do vídeo.

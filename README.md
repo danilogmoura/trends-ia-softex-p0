@@ -165,6 +165,37 @@ Um valor presente porém inválido faz o programa falhar com mensagem clara cita
 **apenas o nome** da variável e a faixa esperada (código de saída `2`) — nunca um
 segredo nem stack trace.
 
+### Registro de execução (opcional)
+
+O programa grava **logs de execução em um arquivo local**, deixando o terminal
+exibindo apenas a análise pedida. Por padrão o arquivo é `logs/execucao.log`, que
+já está no [`.gitignore`](.gitignore) (`logs/` e `*.log`) e, portanto, **nunca é
+enviado ao repositório**. Cada execução registra as etapas do ciclo e métricas da
+chamada:
+
+```
+[INFO] entrada recebida e validada (9 caracteres)
+[INFO] configuração carregada: model=<nome-do-modelo>
+[INFO] enviando solicitação ao LLM (2 mensagens)
+[INFO] chamada concluída: model=<nome> duracao=21107ms mensagens=2 resposta_chars=425
+[INFO] resposta processada para apresentação
+```
+
+Os logs contêm **apenas métricas e o nome do modelo** — nunca o conteúdo da
+entrada, o texto da resposta, a chave de acesso ou o endpoint. Duas variáveis
+externas ajustam o registro, sem editar o código:
+
+| Variável | Efeito | Valores aceitos |
+| --- | --- | --- |
+| `LLM_LOG_FILE` | caminho do arquivo de log | qualquer caminho; ausente → `logs/execucao.log` |
+| `LLM_LOG_LEVEL` | nível mínimo registrado | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
+
+Ausente ou com valor desconhecido, o nível cai em `INFO` e o programa **continua
+rodando** (emite apenas um aviso). Se o arquivo indicado não puder ser criado
+(permissão/caminho inválido), o logger avisa e usa o stderr como fallback —
+registro é diagnóstico, não requisito funcional, então nenhum erro de digitação
+nessas variáveis derruba a análise.
+
 Segurança:
 
 - O arquivo `.env` está no [`.gitignore`](.gitignore) e **nunca deve ser enviado**

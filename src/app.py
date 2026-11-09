@@ -15,6 +15,7 @@ from .config import ConfiguracaoAusenteError, carregar_config
 from .entrada import validar_entrada
 from .erros import ErroDeConfiguracao, ErroDeLlm
 from .llm import analisar_ingredientes, processar_resposta
+from . import logs
 
 
 def ler_entrada_terminal() -> str:
@@ -58,8 +59,16 @@ def main() -> int:
         bruto = ler_entrada_terminal()                     # passo 1
         entrada = validar_entrada(bruto)                   # passo 1 (validação)
         config = carregar_config()                         # configuração externa
+        # Logger vai para arquivo local (gitignored); nível/caminho vêm da config
+        # ou do ambiente. Configurado aqui, após a leitura, para já usar o destino
+        # correto. Os eventos anteriores (entrada/config) são registrados em
+        # sequência, já no destino final.
+        logs.configurar(config.get("log_level"), config.get("log_file"))
+        logs.LOG.info("entrada recebida e validada (%d caracteres)", len(entrada))
+        logs.LOG.info("configuração carregada: %s", logs.configuracao_para_log(config))
         resposta_crua = analisar_ingredientes(entrada, config)  # passo 2
         resultado = processar_resposta(resposta_crua)      # passo 3
+        logs.LOG.info("resposta processada para apresentação")
         apresentar(resultado)                              # passo 4
         return 0
     except ConfiguracaoAusenteError as erro:

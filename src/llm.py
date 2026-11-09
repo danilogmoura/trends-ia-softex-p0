@@ -8,10 +8,11 @@ espaços e quebras irregulares antes da apresentação. A conexão vem sempre de
 
 import re
 import textwrap
+import time
 
 from openai import OpenAI
 
-from . import erros
+from . import erros, logs
 
 # Prompt do sistema: define o papel informacional, o contrato de saída concisa
 # para terminal (decisão 0.9) e o limite anti-diagnóstico (decisão final humana).
@@ -76,7 +77,22 @@ def analisar_ingredientes(entrada_validada: str, config: dict) -> str:
     if "timeout" in config:
         kwargs["timeout"] = config["timeout"]
     cliente = OpenAI(base_url=config["base_url"], api_key=config["api_key"], **kwargs)
-    return erros.chamar_llm(cliente, config, preparar_mensagens(entrada_validada))
+
+    mensagens = preparar_mensagens(entrada_validada)
+    # Registro de execução (Avançado — item 2): métricas e modelo, nunca o conteúdo.
+    logs.LOG.info("enviando solicitação ao LLM (%d mensagens)", len(mensagens))
+    inicio = time.perf_counter()
+    resposta = erros.chamar_llm(cliente, config, mensagens)
+    duracao_ms = round((time.perf_counter() - inicio) * 1000)
+    logs.LOG.info(
+        logs.resumo_de_chamada(
+            model=config.get("model", "?"),
+            duracao_ms=duracao_ms,
+            n_mensagens=len(mensagens),
+            chars_resposta=len(resposta),
+        )
+    )
+    return resposta
 
 # Largura máxima de coluna para o texto do terminal (decisão 0.9). Evita que o
 # modelo estenda linhas muito longas, que quebram de forma ilegível no console.

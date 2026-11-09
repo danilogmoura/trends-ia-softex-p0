@@ -148,6 +148,23 @@ LLM:
 | `LLM_API_KEY` | sua chave de acesso ao serviço |
 | `LLM_MODEL` | o identificador exato do modelo a usar |
 
+### Parâmetros de geração (opcionais)
+
+Além das três chaves obrigatórias, é possível ajustar o comportamento da chamada
+**sem editar o código**, definindo variáveis opcionais no `.env`. Se você não as
+preencher, o programa simplesmente não as envia e o provedor aplica seus próprios
+padrões.
+
+| Variável | Efeito | Formato aceito |
+| --- | --- | --- |
+| `LLM_MAX_TOKENS` | limite máximo de tokens da resposta | inteiro positivo (ex.: `512`) |
+| `LLM_TEMPERATURE` | criatividade da amostragem (menos = mais determinístico) | número entre `0` e `2` (ex.: `0.3`) |
+| `LLM_TIMEOUT` | tempo máximo de espera pela resposta, em segundos | número maior que zero (ex.: `30`) |
+
+Um valor presente porém inválido faz o programa falhar com mensagem clara citando
+**apenas o nome** da variável e a faixa esperada (código de saída `2`) — nunca um
+segredo nem stack trace.
+
 Segurança:
 
 - O arquivo `.env` está no [`.gitignore`](.gitignore) e **nunca deve ser enviado**

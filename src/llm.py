@@ -69,9 +69,14 @@ def analisar_ingredientes(entrada_validada: str, config: dict) -> str:
     monta o cliente e delega — as exceções técnicas da lib ``openai`` nunca vazam
     para o chamador, que recebe sempre uma :class:`src.erros.ErroDeLlm` legível.
     """
-    cliente = OpenAI(base_url=config["base_url"], api_key=config["api_key"])
+    # timeout é parâmetro do *cliente* (Avançado — item 1): só é passado se veio
+    # no ambiente; ausente, a lib usa seu padrão. max_tokens/temperature seguem
+    # pela config para chamar_llm, que os injeta na requisição quando presentes.
+    kwargs = {}
+    if "timeout" in config:
+        kwargs["timeout"] = config["timeout"]
+    cliente = OpenAI(base_url=config["base_url"], api_key=config["api_key"], **kwargs)
     return erros.chamar_llm(cliente, config, preparar_mensagens(entrada_validada))
-
 
 # Largura máxima de coluna para o texto do terminal (decisão 0.9). Evita que o
 # modelo estenda linhas muito longas, que quebram de forma ilegível no console.

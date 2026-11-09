@@ -82,3 +82,47 @@ def test_timeout_e_distinto_de_queda_de_conexao():
         erros.chamar_llm(_ClienteQueFalha(exc), CONFIG_FAKE, MENSAGENS)
     # Timeout NÃO deve ser tratado como indisponibilidade genérica.
     assert not isinstance(excinfo.value, erros.ErroIndisponibilidade)
+
+
+# --- Nível Avançado, item 1: chamar_llm repassa os parâmetros de geração ---
+
+
+class _ClienteQueRegistra:
+    """Cliente fake que grava os kwargs da chamada e devolve uma resposta mínima válida."""
+
+    def __init__(self):
+        self.kwargs: dict = {}
+        completions = self._Completions(self)
+        chat = type("_Chat", (), {"completions": completions})()
+        self.chat = chat
+
+    class _Completions:
+        def __init__(self, dono):
+            self._dono = dono
+
+        def create(self, *args, **kwargs):
+            self._dono.kwargs = kwargs
+            mensagem = type("_Msg", (), {"content": "ok"})()
+            escolha = type("_Choice", (), {"message": mensagem})()
+            return type("_Resp", (), {"choices": [escolha]})()
+
+
+def test_parametros_presentes_sao_repassados():
+    """max_tokens/temperature no config devem chegar ao create() do cliente."""
+    cliente = _ClienteQueRegistra()
+    config = {**CONFIG_FAKE, "max_tokens": 512, "temperature": 0.3}
+
+    erros.chamar_llm(cliente, config, MENSAGENS)
+
+    assert cliente.kwargs["max_tokens"] == 512
+    assert cliente.kwargs["temperature"] == pytest.approx(0.3)
+
+
+def test_parametros_ausentes_nao_sao_enviados():
+    """Sem os opcionais no config, create() não recebe os campos (usa padrão do provedor)."""
+    cliente = _ClienteQueRegistra()
+
+    erros.chamar_llm(cliente, dict(CONFIG_FAKE), MENSAGENS)
+
+    assert "max_tokens" not in cliente.kwargs
+    assert "temperature" not in cliente.kwargs

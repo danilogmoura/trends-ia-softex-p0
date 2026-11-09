@@ -75,9 +75,17 @@ def chamar_llm(cliente: OpenAI, config: dict, mensagens: list[dict]) -> str:
     timeout seja distinguido de uma queda de conexão comum (cenário 5 ≠ 4).
     """
     try:
+        # Parâmetros de geração opcionais (Avançado — item 1): só são enviados se
+        # vieram no config; ausentes, o provedor aplica seus próprios padrões.
+        extras = {
+            chave: config[chave]
+            for chave in ("max_tokens", "temperature")
+            if chave in config
+        }
         resposta = cliente.chat.completions.create(
             model=config["model"],
             messages=mensagens,
+            **extras,
         )
     except AuthenticationError:
         raise ErroDeAutenticacao(
@@ -166,4 +174,45 @@ def validar_configuracao(config: dict) -> dict:
             "completo, por exemplo https://servidor/v1 . (Consulte o .env.example.)"
         )
     return config
+
+
+# Parâmetros de geração opcionais (Nível Avançado — item 1). Cada um é lido do
+# ambiente só se presente e não-vazio; ausente, o campo nem vai à requisição e o
+# provedor usa seu próprio padrão. A faixa valida impede valores sem sentido.
+#   chave no dict  ->  (nome da env, conversor, validador de faixa)
+_PARAMETROS_OPCIONAIS = {
+    "max_tokens": ("LLM_MAX_TOKENS", int, lambda v: v > 0,
+                   "um inteiro positivo (ex.: 512)"),
+    "temperature": ("LLM_TEMPERATURE", float, lambda v: 0.0 <= v <= 2.0,
+                    "um número entre 0 e 2 (ex.: 0.3)"),
+    "timeout": ("LLM_TIMEOUT", float, lambda v: v > 0,
+                "um número de segundos maior que zero (ex.: 30)"),
+}
+
+
+def validar_parametros_geracao(valores_env: dict) -> dict:
+    """Converte e valida os parâmetros de geração opcionais vindos do ambiente.
+
+    Recebe ``{nome_da_variavel: valor_bruto}`` apenas para as variáveis presentes.
+    Devolve ``{chave_interna: valor_tipado}`` somente das que vieram preenchidas.
+    Valor presente porém inválido levanta :class:`ErroDeConfiguracao` citando o
+    **nome** da variável e a faixa esperada — nunca um segredo nem stack trace.
+    """
+    resultado: dict = {}
+    for chave, (nome_env, conversor, na_faixa, descricao) in _PARAMETROS_OPCIONAIS.items():
+        bruto = valores_env.get(nome_env)
+        if bruto is None or bruto.strip() == "":
+            continue  # ausente → mantém o padrão do provedor, não injeta a chave
+        try:
+            valor = conversor(bruto.strip())
+        except ValueError:
+            raise ErroDeConfiguracao(
+                f"A variável {nome_env} deve ser {descricao}. Valor atual é inválido."
+            ) from None
+        if not na_faixa(valor):
+            raise ErroDeConfiguracao(
+                f"A variável {nome_env} deve ser {descricao}. Valor atual está fora da faixa."
+            )
+        resultado[chave] = valor
+    return resultado
 

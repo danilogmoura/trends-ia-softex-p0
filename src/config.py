@@ -58,5 +58,20 @@ def carregar_config(*, carregar_arquivo: bool = True) -> dict:
             "api_key": os.environ["LLM_API_KEY"].strip(),
             "model": os.environ["LLM_MODEL"].strip(),
         }
-    )
+    ) | _ler_parametros_geracao()
+
+
+def _ler_parametros_geracao() -> dict:
+    """Lê do ambiente os parâmetros de geração opcionais (Avançado — item 1).
+
+    Coleta apenas as variáveis presentes (``LLM_MAX_TOKENS``, ``LLM_TEMPERATURE``,
+    ``LLM_TIMEOUT``) e delega conversão/validação a
+    :func:`src.erros.validar_parametros_geracao`. Ausentes, retornam vazio e o
+    app segue com os padrões do provedor — nada é injetado na requisição.
+    """
+    nomes = [nome for nome, *_ in erros._PARAMETROS_OPCIONAIS.values()]
+    valores_env = {
+        nome: os.environ[nome] for nome in nomes if (os.environ.get(nome) or "").strip()
+    }
+    return erros.validar_parametros_geracao(valores_env)
 

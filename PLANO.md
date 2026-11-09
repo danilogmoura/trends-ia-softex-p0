@@ -118,6 +118,16 @@ Duração prevista do P0: 4–5 semanas.
   "auth" por número — a distinção vive na **mensagem humana** impressa no stderr (cada exceção carrega a sua
   frase), exatamente o que o checklist exige ("mensagem compreensível", sem erro técnico extenso). Mapear cada
   classe para um código próprio seria complexidade sem consequência do problema.
+- [x] 0.15 **Decisão dos parâmetros externos no Avançado (registrada 2026-11-08, item 1).**
+  O enunciado pede que "limite de tokens, parâmetros de geração ou comportamento básico" mudem **sem editar o
+  núcleo**. Exponho exatamente três variáveis **opcionais** no `.env`: `LLM_MAX_TOKENS` (inteiro > 0),
+  `LLM_TEMPERATURE` (float em [0,2]) e `LLM_TIMEOUT` (segundos > 0). São opcionais por decisão: ausentes, o campo
+  **nem vai à requisição** e o provedor usa seu padrão — assim nada quebra quem não os define, respeitando o
+  princípio da alternativa mais simples. Parse+validação numa função nova (`erros.validar_parametros_geracao`);
+  valor presente porém inválido → `ErroDeConfiguracao` citando só o **nome** e a faixa, reaproveitando o exit `2`
+  da config (decisão 0.14, sem código novo). `timeout` é aplicado ao *cliente* OpenAI (não ao corpo do request);
+  `max_tokens`/`temperature` são injetados por `chamar_llm` quando presentes. O `SYSTEM_PROMPT` e a lógica de
+  análise permanecem intactos — muda só a requisição.
 
 **Problema escolhido:** Traduzir a lista de ingredientes de um produto
 industrializado — cheia de termos técnicos, códigos INS e subprodutos que mascaram
@@ -353,7 +363,8 @@ enunciado só admite via integração simulada, o **teste offline** fica no Avan
 
 ### Sequência de commits prevista
 
-- [ ] 1. `feat(avancado): parâmetros do LLM ajustáveis por configuração externa` — mudar token/temperatura no `.env` altera a requisição sem editar código.
+- [x] 1. `feat(avancado): parâmetros do LLM ajustáveis por configuração externa` — mudar token/temperatura no `.env` altera a requisição sem editar código.
+  **Evidência:** três variáveis opcionais (`LLM_MAX_TOKENS`, `LLM_TEMPERATURE`, `LLM_TIMEOUT`) lidas em `config.py::_ler_parametros_geracao` e validadas em `erros.validar_parametros_geracao`; `chamar_llm` injeta `max_tokens`/`temperature` só quando presentes, e `llm.analisar_ingredientes` aplica `timeout` ao cliente. Ausentes → campo não enviado (padrão do provedor). Inválido → `ErroDeConfiguracao` com exit `2` citando nome+faixa, sem segredo. Núcleo (`SYSTEM_PROMPT`) intocado. TDD: +15 testes (11 vermelhos→verde em `test_config.py`/`test_rede.py`); suíte completa **27 passed**. Smoke: config válido tipado, ausente não injeta, `temperature=9`→exit 2 legível. Decisão 0.15 registrada.
 - [ ] 2. `feat(avancado): registros de execução sem segredos nem dados pessoais` — log inspecionado não contém chave nem conteúdo sensível.
 - [ ] 3. `test(avancado): suíte local executável sem chamada real ao LLM` — `pytest` completo passa offline. Inclui o `test_resposta.py` de **resposta ausente/vazia com integração simulada**, movido do Básico pela decisão 0.10.
 - [ ] 4. `chore(avancado): validação em ambiente limpo e correções registradas` — venv nova segue só o README; problemas/correções anotados no relatório.
